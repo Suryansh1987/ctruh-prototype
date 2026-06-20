@@ -507,6 +507,30 @@ function OverviewPage({ report }: { report: XRReport }) {
             <Text style={s.oppText}>{clampText(opp, 92)}</Text>
           </View>
         ))}
+
+        {report.storeInsights?.length > 0 && (
+          <View style={{ marginTop: 16 }}>
+            <Text style={s.oppTitle}>Store insights</Text>
+            {report.storeInsights.slice(0, 4).map((insight, i) => (
+              <View key={i} style={[s.oppItem, { backgroundColor: BLUE_LIGHT }]}>
+                <View style={[s.oppDot, { backgroundColor: BLUE }]} />
+                <Text style={s.oppText}>{clampText(insight, 110)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {report.quickWins?.length > 0 && (
+          <View style={{ marginTop: 12 }}>
+            <Text style={[s.oppTitle, { color: GREEN }]}>Quick wins — start here</Text>
+            {report.quickWins.slice(0, 3).map((win, i) => (
+              <View key={i} style={[s.oppItem, { backgroundColor: "#e8fff7", borderRadius: 6 }]}>
+                <View style={[s.oppDot, { backgroundColor: GREEN }]} />
+                <Text style={[s.oppText, { color: "#005738" }]}>{clampText(win, 110)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </Page>
   );
@@ -608,24 +632,32 @@ function ProductDetailPage({
             score={product.xrScores.visualization3D.score}
             confidence={confidenceLabel(product.xrScores.visualization3D.confidence)}
             reason={product.xrScores.visualization3D.reason}
+            missingOut={product.xrScores.visualization3D.missingOut}
+            tip={product.xrScores.visualization3D.tip}
           />
           <DimensionBlock
             label="Try-On Potential"
             score={product.xrScores.virtualTryOn.score}
             confidence={confidenceLabel(product.xrScores.virtualTryOn.confidence)}
             reason={product.xrScores.virtualTryOn.reason}
+            missingOut={product.xrScores.virtualTryOn.missingOut}
+            tip={product.xrScores.virtualTryOn.tip}
           />
           <DimensionBlock
             label="Style Switching Value"
             score={product.xrScores.configurator.score}
             confidence={confidenceLabel(product.xrScores.configurator.confidence)}
             reason={product.xrScores.configurator.reason}
+            missingOut={product.xrScores.configurator.missingOut}
+            tip={product.xrScores.configurator.tip}
           />
           <DimensionBlock
             label="High-Ticket Confidence"
             score={product.xrScores.immersiveCommerce.score}
             confidence={confidenceLabel(product.xrScores.immersiveCommerce.confidence)}
             reason={product.xrScores.immersiveCommerce.reason}
+            missingOut={product.xrScores.immersiveCommerce.missingOut}
+            tip={product.xrScores.immersiveCommerce.tip}
           />
         </View>
 
