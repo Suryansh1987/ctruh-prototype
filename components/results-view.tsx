@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  ROI_BASE_CONVERSION_RATE,
+  ROI_BASE_RETURN_RATE,
+  ROI_CONVERSION_LIFT_MULTIPLIER,
+  ROI_RETURN_REDUCTION_MULTIPLIER,
+  ROI_TRAFFIC_LEVELS,
+} from "@/lib/scoring/xr-readiness";
 import type { XRReport } from "@/lib/types";
 
 function scoreBucket(score: number): "strong" | "mid" | "low" {
@@ -9,14 +16,19 @@ function scoreBucket(score: number): "strong" | "mid" | "low" {
   return "low";
 }
 
-function getToolCards() {
+function getToolCards(generatedCount: number) {
+  const generationDescription =
+    generatedCount > 0
+      ? `Asset audit + 3D generation for your top ${generatedCount} product${generatedCount === 1 ? "" : "s"}`
+      : "Asset audit + 3D generation for your priority products";
+
   return [
     {
       key: "versaai",
       title: "VersaAI",
       subtitle: "Converts your product photos into interactive 3D models",
       week: "Week 1",
-      description: "Asset audit + 3D generation for your top 3 products",
+      description: generationDescription,
       icon: "AI",
     },
     {
@@ -86,6 +98,23 @@ function RevealSection({
 }
 
 
+function InfoTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="xr-tooltip-wrap" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <span className="xr-tooltip-icon">i</span>
+      {show && <span className="xr-tooltip-bubble">{text}</span>}
+    </span>
+  );
+}
+
+const DIMENSION_INFO: Record<string, string> = {
+  "Looks Better in 3D?": "How much this product benefits from 3D viewing — complex shapes, textures, and physical details score higher.",
+  "Virtual Try-On Ready?": "How well this product can be virtually tried on — wearables, eyewear, and accessories score highest.",
+  "Style Switcher Ready?": "How much value a live variant configurator adds — products with many color, size, or material options score higher.",
+  "XR Score": "Overall XR opportunity score (1–10) combining all four dimensions, weighted by product category.",
+};
+
 export function ResultsView({
   report,
   onReset,
@@ -102,11 +131,17 @@ export function ResultsView({
     () => [...report.products].sort((a, b) => b.overallXRScore - a.overallXRScore),
     [report.products]
   );
+  const generatedProducts = useMemo(
+    () => sortedProducts.filter((product) => product.previewImageUrl || product.glbUrl),
+    [sortedProducts]
+  );
   const readyProducts = sortedProducts.filter((product) => product.overallXRScore >= 7).length;
   const topRows = sortedProducts.slice(0, 10);
-  const buildCards = getToolCards();
+  const buildCards = getToolCards(generatedProducts.length);
+  const conversionLiftPct = Math.round((ROI_CONVERSION_LIFT_MULTIPLIER - 1) * 100);
+  const returnReductionPct = Math.round((1 - ROI_RETURN_REDUCTION_MULTIPLIER) * 100);
 
-  async function handleDownloadPDF() {
+  const handleDownloadPDF = useCallback(async () => {
     const res = await fetch("/api/download-pdf", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -120,7 +155,7 @@ export function ResultsView({
     a.download = `ctruh-xr-report-${report.storeName.toLowerCase()}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-  }
+  }, [report]);
 
   async function handleCalendlyClick() {
     window.open("https://calendly.com/contact-ctruh/30min", "_blank", "noopener,noreferrer");
@@ -147,9 +182,9 @@ export function ResultsView({
 
       <RevealSection>
         <div className="xr-section-heading">
-          <h2>{report.storeName} has {readyProducts} products ready for immersive commerce</h2>
+          <h2>{report.storeName} has {readyProducts} products ready for 3D and AR shopping experiences</h2>
           <p>
-            Brands like yours typically see 40% fewer returns and 90% higher conversions after going immersive.
+            We ranked your catalog for 3D viewing, AR, try-on, and configurable shopping moments.
           </p>
         </div>
       </RevealSection>
@@ -162,10 +197,22 @@ export function ResultsView({
               <tr>
                 <th>Product</th>
                 <th>Category</th>
-                <th>Looks Better in 3D?</th>
-                <th>Virtual Try-On Ready?</th>
-                <th>Style Switcher Ready?</th>
-                <th>XR Score</th>
+                <th>
+                  Looks Better in 3D?
+                  <InfoTooltip text={DIMENSION_INFO["Looks Better in 3D?"]} />
+                </th>
+                <th>
+                  Virtual Try-On Ready?
+                  <InfoTooltip text={DIMENSION_INFO["Virtual Try-On Ready?"]} />
+                </th>
+                <th>
+                  Style Switcher Ready?
+                  <InfoTooltip text={DIMENSION_INFO["Style Switcher Ready?"]} />
+                </th>
+                <th>
+                  XR Score
+                  <InfoTooltip text={DIMENSION_INFO["XR Score"]} />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -192,6 +239,76 @@ export function ResultsView({
         </div>
       </RevealSection>
 
+      {sortedProducts.slice(0, 3).some((p) => p.xrScores.visualization3D.missingOut) && (
+        <RevealSection className="mt-12">
+          <div className="xr-section-label">Deep dive — what you&apos;re missing &amp; how to fix it</div>
+          {sortedProducts.slice(0, 3).map((product) => (
+            <div key={product.id} className="xr-deep-card">
+              <div className="xr-deep-header">
+                <span className="xr-deep-title">{product.title}</span>
+                <span className="xr-deep-priority-badge">{product.xrPriority}</span>
+                <span className={`xr-table-score-pill is-${scoreBucket(product.overallXRScore)}`} style={{ marginLeft: "auto" }}>
+                  {product.overallXRScore.toFixed(1)}/10
+                </span>
+              </div>
+              <p className="xr-deep-priority-reason">{product.xrPriorityReason}</p>
+              <div className="xr-deep-dims">
+                {(
+                  [
+                    { label: "3D Viewer", dim: product.xrScores.visualization3D },
+                    { label: "Virtual Try-On", dim: product.xrScores.virtualTryOn },
+                    { label: "Configurator", dim: product.xrScores.configurator },
+                    { label: "AR Placement", dim: product.xrScores.immersiveCommerce },
+                  ] as const
+                ).map(({ label, dim }) => (
+                  <div key={label} className={`xr-deep-dim is-${scoreBucket(dim.score)}`}>
+                    <div className="xr-deep-dim-header">
+                      <span className="xr-deep-dim-label">{label}</span>
+                      <span className="xr-deep-dim-score">{dim.score}/10</span>
+                    </div>
+                    <p className="xr-deep-dim-missing">
+                      <span className="xr-deep-dim-tag xr-deep-dim-tag--miss">Missing out:</span>
+                      {dim.missingOut}
+                    </p>
+                    <p className="xr-deep-dim-tip">
+                      <span className="xr-deep-dim-tag xr-deep-dim-tag--tip">Quick fix:</span>
+                      {dim.tip}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </RevealSection>
+      )}
+
+      {(report.storeInsights?.length > 0 || report.quickWins?.length > 0) && (
+        <RevealSection className="mt-12">
+          <div className="xr-insights-grid">
+            {report.storeInsights?.length > 0 && (
+              <div className="xr-insights-col">
+                <div className="xr-section-label">Store insights</div>
+                <ul className="xr-insights-list">
+                  {report.storeInsights.map((insight, i) => (
+                    <li key={i} className="xr-insights-item xr-insights-item--insight">{insight}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {report.quickWins?.length > 0 && (
+              <div className="xr-insights-col">
+                <div className="xr-section-label">Quick wins</div>
+                <ul className="xr-insights-list">
+                  {report.quickWins.map((win, i) => (
+                    <li key={i} className="xr-insights-item xr-insights-item--win">{win}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </RevealSection>
+      )}
+
       <RevealSection className="mt-12">
         <div className="xr-section-label">What could XR mean for your revenue?</div>
         <div className="xr-roi-grid">
@@ -206,7 +323,23 @@ export function ResultsView({
           ))}
         </div>
         <div className="xr-disclaimer">
-          Based on Ctruh&apos;s results across 100+ stores. Estimates vary by category and implementation.
+          Estimated from fixed benchmark scenarios, not your live analytics.
+        </div>
+        <div className="xr-info-card" style={{ marginTop: 16 }}>
+          <h3>How impact is calculated</h3>
+          <p>
+            We model {ROI_TRAFFIC_LEVELS.map((level) => level.toLocaleString()).join(" / ")} monthly visitors,
+            a {Math.round(ROI_BASE_CONVERSION_RATE * 100)}% baseline conversion rate, a {conversionLiftPct}% 3D + AR
+            conversion lift, a {Math.round(ROI_BASE_RETURN_RATE * 100)}% baseline return rate, and a {returnReductionPct}%
+            return reduction.
+          </p>
+          <p>
+            Extra monthly impact = additional orders from the conversion lift plus return savings, using your analyzed
+            average product price of ${Math.round(report.avgProductPrice)}.
+          </p>
+        </div>
+        <div className="xr-disclaimer">
+          Benchmarks are directional. Actual business impact depends on traffic quality, category, pricing, and rollout.
         </div>
       </RevealSection>
 
@@ -225,10 +358,10 @@ export function ResultsView({
         </div>
       </RevealSection>
 
-      {sortedProducts.some((p) => p.imageUrl || p.previewImageUrl) && (
+      {generatedProducts.length > 0 && (
         <RevealSection className="mt-12">
           <div className="xr-section-label">Before XR → After XR</div>
-          {sortedProducts.filter((p) => p.imageUrl || p.previewImageUrl).slice(0, 2).map((product) => (
+          {generatedProducts.slice(0, 2).map((product) => (
             <div key={product.id} className="xr-beforeafter-section" style={{ marginBottom: 32 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 10 }}>{product.title}</div>
               <div className="xr-ba-grid">

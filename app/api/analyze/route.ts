@@ -1,7 +1,7 @@
 import { scrapeShopifyProducts } from "@/lib/shopify/scraper";
 import { scoreAllProducts } from "@/lib/openai/scorer";
 import { generateMockupsForTopProducts } from "@/lib/openai/image-generator";
-import { computeXRReadinessScore, computeTopOpportunities, computeROIScenarios } from "@/lib/scoring/xr-readiness";
+import { computeXRReadinessScore, computeTopOpportunities, computeROIScenarios, computeStoreInsights, computeQuickWins } from "@/lib/scoring/xr-readiness";
 import { uploadPdfToS3 } from "@/lib/s3/upload";
 import { generateReportPDF } from "@/lib/pdf/generate";
 import { getVerifiedContact, insertReport, insertTokenLogs } from "@/lib/db/queries";
@@ -76,6 +76,8 @@ export async function POST(request: Request) {
         const avgProductPrice = products.reduce((s, p) => s + p.price, 0) / products.length;
         const roiScenarios = computeROIScenarios(avgProductPrice);
         const categories = Array.from(new Set(productsWithMockups.map((p) => p.category)));
+        const storeInsights = computeStoreInsights(productsWithMockups);
+        const quickWins = computeQuickWins(productsWithMockups);
 
         const report: XRReport = {
           storeName,
@@ -85,6 +87,8 @@ export async function POST(request: Request) {
           productCount: products.length,
           categories,
           topOpportunities,
+          storeInsights,
+          quickWins,
           products: productsWithMockups,
           roiScenarios,
           avgProductPrice,

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { GlbEntry } from "@/lib/db/schema";
 
@@ -80,9 +81,9 @@ function ReportCard({ report }: { report: ReportRow }) {
             Download PDF
           </a>
         )}
-        <a href="/" className="rp-action-link rp-action-link--primary">
+        <Link href="/" className="rp-action-link rp-action-link--primary">
           New Analysis →
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -150,7 +151,7 @@ export function ReportsClient() {
   return (
     <div className="rp-page">
       <div className="rp-header">
-        <a href="/" className="rp-back">← Back</a>
+        <Link href="/" className="rp-back">← Back</Link>
         <div className="rp-wordmark">Ctruh</div>
       </div>
 
@@ -216,9 +217,9 @@ export function ReportsClient() {
             ) : (
               reports.map((r) => <ReportCard key={r.id} report={r} />)
             )}
-            <a href="/" className="rp-submit" style={{ display: "block", textAlign: "center", marginTop: 24, textDecoration: "none" }}>
+            <Link href="/" className="rp-submit" style={{ display: "block", textAlign: "center", marginTop: 24, textDecoration: "none" }}>
               Analyze Another Store →
-            </a>
+            </Link>
           </div>
         )}
       </div>

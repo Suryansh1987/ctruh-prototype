@@ -9,6 +9,13 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { XRReport, ScoredProduct, Confidence } from "@/lib/types";
+import {
+  ROI_BASE_CONVERSION_RATE,
+  ROI_BASE_RETURN_RATE,
+  ROI_CONVERSION_LIFT_MULTIPLIER,
+  ROI_RETURN_REDUCTION_MULTIPLIER,
+  ROI_TRAFFIC_LEVELS,
+} from "@/lib/scoring/xr-readiness";
 
 const BLUE = "#0057ff";
 const BLUE_DEEP = "#001aff";
@@ -101,7 +108,7 @@ const s = StyleSheet.create({
     fontSize: 16, fontFamily: "Helvetica-Bold", color: BLUE_DEEP, marginBottom: 4,
   },
   productMeta: { fontSize: 9, color: GRAY_600, marginBottom: 12 },
-  productReason: { fontSize: 8.5, color: GRAY_600, lineHeight: 1.5, marginBottom: 14 },
+  productReason: { fontSize: 8.5, color: GRAY_600, lineHeight: 1.4, marginBottom: 12 },
 
   // Before / After comparison
   baSection: { marginBottom: 16 },
@@ -119,12 +126,12 @@ const s = StyleSheet.create({
   },
   baTagAfter: { color: BLUE, backgroundColor: BLUE_LIGHT },
   baImgBox: {
-    width: "100%", height: 150, backgroundColor: GRAY_100,
+    width: "100%", height: 128, backgroundColor: GRAY_100,
     borderRadius: 8, overflow: "hidden", borderColor: BLUE_BORDER, borderWidth: 1,
   },
-  baImg: { width: "100%", height: 150, objectFit: "contain" },
+  baImg: { width: "100%", height: 128, objectFit: "contain" },
   baPlaceholder: {
-    width: "100%", height: 150, backgroundColor: BLUE_LIGHT,
+    width: "100%", height: 128, backgroundColor: BLUE_LIGHT,
     borderRadius: 8, borderColor: BLUE_BORDER, borderWidth: 1,
     alignItems: "center", justifyContent: "center",
   },
@@ -135,14 +142,14 @@ const s = StyleSheet.create({
 
   scoresBlock: { flex: 1 },
   dimensionRow: {
-    marginBottom: 10, backgroundColor: GRAY_100, borderRadius: 6, padding: 10,
+    marginBottom: 8, backgroundColor: GRAY_100, borderRadius: 6, padding: 8,
   },
   dimensionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
   dimensionName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#1F2937", flex: 1 },
   dimensionScore: { fontSize: 16, fontFamily: "Helvetica-Bold" },
   confidenceBadge: { borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1, marginLeft: 6 },
   confidenceBadgeText: { fontSize: 7, color: "#FFFFFF" },
-  dimensionReason: { fontSize: 8, color: GRAY_600 },
+  dimensionReason: { fontSize: 7.5, color: GRAY_600, lineHeight: 1.35 },
   progressBar: { height: 4, backgroundColor: GRAY_300, borderRadius: 2, marginTop: 6 },
   progressFill: { height: 4, borderRadius: 2 },
 
@@ -158,6 +165,15 @@ const s = StyleSheet.create({
   assetValue: { fontSize: 8, fontFamily: "Helvetica-Bold", color: "#1F2937" },
   assetRecs: { marginTop: 8 },
   assetRec: { fontSize: 8, color: GRAY_600, marginBottom: 2 },
+  browserButton: {
+    fontSize: 8,
+    color: "#FFFFFF",
+    backgroundColor: BLUE,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    textDecoration: "none",
+  },
 
   // ROI
   roiIntro: { fontSize: 9, color: GRAY_600, marginBottom: 16, lineHeight: 1.5 },
@@ -182,11 +198,12 @@ const s = StyleSheet.create({
     marginBottom: 12, backgroundColor: BLUE_LIGHT, borderRadius: 8, padding: 14,
   },
   mappingProduct: { fontSize: 10, fontFamily: "Helvetica-Bold", color: BLUE_DEEP, marginBottom: 4 },
-  mappingTools: { flexDirection: "row", gap: 6, marginBottom: 8 },
+  mappingTools: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 4 },
   mappingToolBadge: {
     backgroundColor: BLUE, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3,
   },
   mappingToolText: { fontSize: 8, color: "#FFFFFF" },
+  mappingToolDesc: { fontSize: 7, color: GRAY_600, marginBottom: 8 },
   roadmapRow: { flexDirection: "row", gap: 8 },
   roadmapWeek: { flex: 1, backgroundColor: "#FFFFFF", borderRadius: 4, padding: 8, borderColor: BLUE_BORDER, borderWidth: 0.5 },
   roadmapWeekLabel: { fontSize: 7, fontFamily: "Helvetica-Bold", color: BLUE, marginBottom: 4 },
@@ -215,13 +232,13 @@ function confidenceLabel(confidence: Confidence): string {
 
 function getBusinessReason(product: ScoredProduct): string {
   const entries = [
-    ["virtualTryOn", product.xrScores.virtualTryOn.score],
-    ["visualization3D", product.xrScores.visualization3D.score],
-    ["configurator", product.xrScores.configurator.score],
-    ["immersiveCommerce", product.xrScores.immersiveCommerce.score],
-  ].sort(([, a], [, b]) => b - a);
+    { key: "virtualTryOn", score: product.xrScores.virtualTryOn.score },
+    { key: "visualization3D", score: product.xrScores.visualization3D.score },
+    { key: "configurator", score: product.xrScores.configurator.score },
+    { key: "immersiveCommerce", score: product.xrScores.immersiveCommerce.score },
+  ].sort((a, b) => b.score - a.score);
 
-  switch (entries[0][0]) {
+  switch (entries[0]?.key) {
     case "virtualTryOn":
       return "Customers can't tell how this will fit from a flat photo. Virtual try-on removes that doubt and directly reduces returns.";
     case "visualization3D":
@@ -233,18 +250,35 @@ function getBusinessReason(product: ScoredProduct): string {
   }
 }
 
-function toolDisplayName(tool: string): string {
-  if (tool === "VersaAI") {
-    return "VersaAI — converts your product photos into interactive 3D models";
-  }
-  if (tool === "Commverse Studio") {
-    return "Commverse Studio — your virtual storefront, live in a browser, no app needed";
-  }
-  return "3D Configurator — lets customers switch colors, materials, and styles in real time";
+function toolDescription(tool: string): string {
+  if (tool === "VersaAI") return "Converts your product photos into interactive 3D models";
+  if (tool === "Commverse Studio") return "Your virtual storefront, live in a browser, no app needed";
+  return "Lets customers switch colors, materials, and styles in real time";
 }
 
 function formatCurrency(n: number): string {
   return `$${n.toLocaleString()}`;
+}
+
+function clampText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function getGeneratedProducts(report: XRReport, limit = 2): ScoredProduct[] {
+  return [...report.products]
+    .filter((product) => product.previewImageUrl || product.glbUrl)
+    .sort((a, b) => b.overallXRScore - a.overallXRScore)
+    .slice(0, limit);
+}
+
+function getRecommendedProducts(report: XRReport, limit = 2): ScoredProduct[] {
+  const generated = getGeneratedProducts(report, limit);
+  if (generated.length > 0) return generated;
+
+  return [...report.products]
+    .sort((a, b) => b.overallXRScore - a.overallXRScore)
+    .slice(0, limit);
 }
 
 // --- Sub-components ---
@@ -262,11 +296,15 @@ function DimensionBlock({
   score,
   confidence,
   reason,
+  missingOut,
+  tip,
 }: {
   label: string;
   score: number;
   confidence: string;
   reason: string;
+  missingOut?: string;
+  tip?: string;
 }) {
   const color = scoreColor(score);
   const fillPct = `${(score / 10) * 100}%`;
@@ -283,7 +321,19 @@ function DimensionBlock({
       <View style={s.progressBar}>
         <View style={[s.progressFill, { width: fillPct as string, backgroundColor: color }]} />
       </View>
-      <Text style={s.dimensionReason}>{reason}</Text>
+      <Text style={s.dimensionReason}>{clampText(reason, 140)}</Text>
+      {missingOut ? (
+        <View style={{ flexDirection: "row", marginTop: 3, gap: 4 }}>
+          <Text style={{ fontSize: 6.5, color: RED, fontFamily: "Helvetica-Bold" }}>Missing out: </Text>
+          <Text style={{ fontSize: 6.5, color: GRAY_600, flex: 1 }}>{clampText(missingOut, 120)}</Text>
+        </View>
+      ) : null}
+      {tip ? (
+        <View style={{ flexDirection: "row", marginTop: 3, gap: 4 }}>
+          <Text style={{ fontSize: 6.5, color: GREEN, fontFamily: "Helvetica-Bold" }}>Quick fix: </Text>
+          <Text style={{ fontSize: 6.5, color: GRAY_600, flex: 1 }}>{clampText(tip, 120)}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -338,10 +388,9 @@ function BeforeAfterBlock({ product }: { product: ScoredProduct }) {
 
       {viewerUrl && (
         <View style={{ marginTop: 10, alignItems: "center" }}>
-          <Link src={viewerUrl} style={{ fontSize: 8, color: BLUE, textDecoration: "underline" }}>
-            Open Interactive 3D Demo →
+          <Link src={viewerUrl} style={s.browserButton}>
+            Open in Browser
           </Link>
-          <Text style={{ fontSize: 7, color: GRAY_600, marginTop: 3 }}>{viewerUrl}</Text>
         </View>
       )}
     </View>
@@ -356,7 +405,7 @@ function CoverPage({ report }: { report: XRReport }) {
           <Text style={s.coverTag}>Powered by Ctruh</Text>
           <Text style={s.coverBrand}>XR (3D and AR shopping experiences) Opportunity Report</Text>
           <Text style={s.coverSubtitle}>
-            Built to help brands discover their XR opportunity
+            Built to help brands prioritize 3D, AR, and try-on opportunities
           </Text>
         </View>
 
@@ -401,6 +450,9 @@ function CoverPage({ report }: { report: XRReport }) {
 }
 
 function OverviewPage({ report }: { report: XRReport }) {
+  const conversionLiftPct = Math.round((ROI_CONVERSION_LIFT_MULTIPLIER - 1) * 100);
+  const returnReductionPct = Math.round((1 - ROI_RETURN_REDUCTION_MULTIPLIER) * 100);
+
   return (
     <Page size="A4" style={s.page}>
       <View style={s.sectionHeader}>
@@ -409,10 +461,10 @@ function OverviewPage({ report }: { report: XRReport }) {
       </View>
       <View style={s.pageInner}>
         <Text style={[s.oppTitle, { fontSize: 14, marginBottom: 8 }]}>
-          {report.storeName} has {report.productCount} products ready for immersive shopping
+          {report.storeName} has {report.productCount} products ranked for 3D and AR shopping experiences
         </Text>
         <Text style={[s.roiIntro, { marginBottom: 18 }]}>
-          Brands like yours typically see 40% fewer returns and 90% higher conversions after adding 3D and AR (try products virtually through your camera) to their product pages.
+          This report ranks where 3D viewing, AR, and virtual try-on could create the most value, then applies benchmark assumptions of {conversionLiftPct}% higher conversion and {returnReductionPct}% fewer returns.
         </Text>
         <View style={s.statsRow}>
           <View style={s.statBox}>
@@ -452,7 +504,7 @@ function OverviewPage({ report }: { report: XRReport }) {
         {report.topOpportunities.map((opp, i) => (
           <View key={i} style={s.oppItem}>
             <View style={s.oppDot} />
-            <Text style={s.oppText}>{opp}</Text>
+            <Text style={s.oppText}>{clampText(opp, 92)}</Text>
           </View>
         ))}
       </View>
@@ -546,7 +598,7 @@ function ProductDetailPage({
         <Text style={s.productMeta}>
           {product.category} · ${product.price} · {product.variantCount} variant{product.variantCount !== 1 ? "s" : ""} · XR Score: {product.overallXRScore}/10
         </Text>
-        <Text style={s.productReason}>{getBusinessReason(product)}</Text>
+        <Text style={s.productReason}>{clampText(getBusinessReason(product), 170)}</Text>
 
         <BeforeAfterBlock product={product} />
 
@@ -605,8 +657,8 @@ function ProductDetailPage({
           {product.assetQuality.recommendations.length > 0 && (
             <View style={s.assetRecs}>
               <Text style={[s.assetLabel, { marginBottom: 4 }]}>RECOMMENDATIONS</Text>
-              {product.assetQuality.recommendations.map((r, i) => (
-                <Text key={i} style={s.assetRec}>· {r}</Text>
+              {product.assetQuality.recommendations.slice(0, 2).map((r, i) => (
+                <Text key={i} style={s.assetRec}>· {clampText(r, 80)}</Text>
               ))}
             </View>
           )}
@@ -616,25 +668,28 @@ function ProductDetailPage({
   );
 }
 
-function ROIPage({ report }: { report: XRReport }) {
+function ROIPage({ report, pageNum }: { report: XRReport; pageNum: number }) {
+  const conversionLiftPct = Math.round((ROI_CONVERSION_LIFT_MULTIPLIER - 1) * 100);
+  const returnReductionPct = Math.round((1 - ROI_RETURN_REDUCTION_MULTIPLIER) * 100);
+
   return (
     <Page size="A4" style={s.page}>
       <View style={s.sectionHeader}>
         <Text style={s.sectionHeaderText}>What Could XR Mean for Your Revenue?</Text>
-        <Text style={s.sectionHeaderSub}>Page {4 + Math.min(3, report.products.length)}</Text>
+        <Text style={s.sectionHeaderSub}>Page {pageNum}</Text>
       </View>
       <View style={s.pageInner}>
         <Text style={s.roiIntro}>
-          Based on Ctruh&apos;s results across 100+ stores. Enter your monthly visitor count to see your estimated impact. Calculated using your store&apos;s average product price of {formatCurrency(Math.round(report.avgProductPrice))}.
+          This estimate uses benchmark traffic scenarios of {ROI_TRAFFIC_LEVELS.map((level) => level.toLocaleString()).join(" / ")} monthly visitors, your store&apos;s analyzed average product price of {formatCurrency(Math.round(report.avgProductPrice))}, a baseline conversion rate of {Math.round(ROI_BASE_CONVERSION_RATE * 100)}%, and a baseline return rate of {Math.round(ROI_BASE_RETURN_RATE * 100)}%.
         </Text>
 
         <View style={s.roiBenchmarks}>
           <View style={s.roiBenchmark}>
-            <Text style={s.roiBenchmarkValue}>90%</Text>
+            <Text style={s.roiBenchmarkValue}>{conversionLiftPct}%</Text>
             <Text style={s.roiBenchmarkLabel}>Higher Conversion{"\n"}Rate</Text>
           </View>
           <View style={s.roiBenchmark}>
-            <Text style={s.roiBenchmarkValue}>40%</Text>
+            <Text style={s.roiBenchmarkValue}>{returnReductionPct}%</Text>
             <Text style={s.roiBenchmarkLabel}>Fewer{"\n"}Returns</Text>
           </View>
           <View style={s.roiBenchmark}>
@@ -664,17 +719,22 @@ function ROIPage({ report }: { report: XRReport }) {
           ))}
         </View>
         <Text style={[s.assetRec, { marginTop: 10 }]}>
-          These numbers are estimates based on published XR commerce benchmarks. Actual results vary by product category, brand, and implementation.
+          Estimated monthly impact = conversion lift revenue + return savings. These benchmarks are directional, not guaranteed.
         </Text>
       </View>
     </Page>
   );
 }
 
-function MappingPage({ report }: { report: XRReport }) {
-  const top3 = [...report.products]
-    .sort((a, b) => b.overallXRScore - a.overallXRScore)
-    .slice(0, 3);
+function MappingPage({
+  report,
+  products,
+  pageNum,
+}: {
+  report: XRReport;
+  products: ScoredProduct[];
+  pageNum: number;
+}) {
 
   function getCtruhTool(product: ScoredProduct): string[] {
     const tools: string[] = [];
@@ -690,13 +750,13 @@ function MappingPage({ report }: { report: XRReport }) {
     <Page size="A4" style={s.page}>
       <View style={s.sectionHeader}>
         <Text style={s.sectionHeaderText}>What Ctruh Would Build for {report.storeName}</Text>
-        <Text style={s.sectionHeaderSub}>Page 7</Text>
+        <Text style={s.sectionHeaderSub}>Page {pageNum}</Text>
       </View>
       <View style={s.pageInner}>
         <Text style={[s.roiIntro, { marginBottom: 16 }]}>
           Here&apos;s exactly what gets built, in what order, and what it does for your store.
         </Text>
-        {top3.map((product) => {
+        {products.map((product) => {
           const tools = getCtruhTool(product);
           return (
             <View key={product.id} style={s.mappingRow}>
@@ -704,10 +764,11 @@ function MappingPage({ report }: { report: XRReport }) {
               <View style={s.mappingTools}>
                 {tools.map((t) => (
                   <View key={t} style={s.mappingToolBadge}>
-                    <Text style={s.mappingToolText}>{toolDisplayName(t)}</Text>
+                    <Text style={s.mappingToolText}>{t}</Text>
                   </View>
                 ))}
               </View>
+              <Text style={s.mappingToolDesc}>{tools.map((t) => toolDescription(t)).join("  ·  ")}</Text>
               <View style={s.roadmapRow}>
                 <View style={s.roadmapWeek}>
                   <Text style={s.roadmapWeekLabel}>Week 1 — Asset Preparation</Text>
@@ -718,7 +779,7 @@ function MappingPage({ report }: { report: XRReport }) {
                 <View style={s.roadmapWeek}>
                   <Text style={s.roadmapWeekLabel}>Week 2 — Build & Integration</Text>
                   <Text style={s.roadmapWeekText}>
-                    {toolDisplayName(tools[0])} is added to the product page and checked across mobile and desktop.
+                    {tools[0]} ({toolDescription(tools[0])}) is added to the product page and checked across mobile and desktop.
                   </Text>
                 </View>
                 <View style={s.roadmapWeek}>
@@ -741,9 +802,10 @@ function MappingPage({ report }: { report: XRReport }) {
 
 // Main document export
 export function ReportDocument({ report }: { report: XRReport }) {
-  const topProducts = [...report.products]
-    .sort((a, b) => b.overallXRScore - a.overallXRScore)
-    .slice(0, 3);
+  const detailProducts = getGeneratedProducts(report, 2);
+  const mappingProducts = getRecommendedProducts(report, 2);
+  const roiPageNum = 4 + detailProducts.length;
+  const mappingPageNum = roiPageNum + 1;
 
   return (
     <Document
@@ -753,11 +815,11 @@ export function ReportDocument({ report }: { report: XRReport }) {
       <CoverPage report={report} />
       <OverviewPage report={report} />
       <HeatmapPage products={report.products} />
-      {topProducts.map((p, i) => (
+      {detailProducts.map((p, i) => (
         <ProductDetailPage key={p.id} product={p} pageNum={4 + i} />
       ))}
-      <ROIPage report={report} />
-      <MappingPage report={report} />
+      <ROIPage report={report} pageNum={roiPageNum} />
+      <MappingPage report={report} products={mappingProducts} pageNum={mappingPageNum} />
     </Document>
   );
 }

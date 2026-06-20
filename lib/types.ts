@@ -15,6 +15,8 @@ export interface DimensionScore {
   score: number;
   confidence: Confidence;
   reason: string;
+  missingOut: string;
+  tip: string;
 }
 
 export interface AssetQuality {
@@ -38,6 +40,8 @@ export interface ScoredProduct extends NormalizedProduct {
   xrScores: XRScores;
   assetQuality: AssetQuality;
   overallXRScore: number;
+  xrPriority: string;
+  xrPriorityReason: string;
   glbUrl: string | null;
   previewImageUrl: string | null;
 }
@@ -58,6 +62,8 @@ export interface XRReport {
   productCount: number;
   categories: string[];
   topOpportunities: string[];
+  storeInsights: string[];
+  quickWins: string[];
   products: ScoredProduct[];
   roiScenarios: ROIScenario[];
   avgProductPrice: number;

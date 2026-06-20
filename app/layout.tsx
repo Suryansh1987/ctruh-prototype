@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ToastProvider } from "@/components/toast";
 
 export const metadata: Metadata = {
-  title: "Ctruh XR (3D and AR shopping experiences) Opportunity Analyzer",
+  title: "Ctruh 3D + AR Shopping Opportunity Analyzer",
   description:
-    "Discover which products in any Shopify store could sell more with 3D viewing and AR (try products virtually through your camera) — powered by Ctruh.",
+    "Discover which Shopify products are best suited for 3D viewing, AR, and virtual try-on — powered by Ctruh.",
 };
 
 export default function RootLayout({
@@ -14,7 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen">{children}</body>
+      <body className="min-h-screen">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { GlbPhaseLoader } from "@/components/ui/glb-phase-loader";
+import {
+  ROI_BASE_CONVERSION_RATE,
+  ROI_BASE_RETURN_RATE,
+  ROI_CONVERSION_LIFT_MULTIPLIER,
+  ROI_RETURN_REDUCTION_MULTIPLIER,
+} from "@/lib/scoring/xr-readiness";
 import type { XRReport } from "@/lib/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -18,6 +25,11 @@ interface SlideConfig {
   subhead: string;
   initStep: number; // which step index is active when slide first loads
   steps: SlideStep[];
+}
+
+export interface MeshyProgressItem {
+  product: string;
+  progress: number;
 }
 
 // ─── Slide Configs ────────────────────────────────────────────────────────────
@@ -88,7 +100,7 @@ function buildSlide4(isComplete: boolean): SlideConfig {
   return {
     label: "ANALYZING 04 / 04",
     headline: "Calculating Business Impact",
-    subhead: "We're translating product opportunities into projected business outcomes.",
+    subhead: "We're translating ranked 3D and AR opportunities into benchmark-based business estimates.",
     initStep: 1,
     steps: [
       { text: "Measuring conversion potential", done: "Conversion potential measured" },
@@ -200,29 +212,33 @@ function OppsVisual({
 
 function MetricsVisual({ report }: { report: XRReport | null }) {
   const impact = report?.roiScenarios?.[1]?.totalMonthlyImpact;
+  const conversionLiftPct = Math.round((ROI_CONVERSION_LIFT_MULTIPLIER - 1) * 100);
+  const returnReductionPct = Math.round((1 - ROI_RETURN_REDUCTION_MULTIPLIER) * 100);
   return (
     <div className="xr-ac-visual xr-ac-visual--metrics">
       <div className="xr-ac-metric-row">
         <div className="xr-ac-metric-card">
-          <span className="xr-ac-metric-val is-up">+94%</span>
-          <span className="xr-ac-metric-label">Conversion ↑</span>
+          <span className="xr-ac-metric-val is-up">+{conversionLiftPct}%</span>
+          <span className="xr-ac-metric-label">benchmark conversion lift</span>
         </div>
         <div className="xr-ac-metric-card">
-          <span className="xr-ac-metric-val is-up">3×</span>
-          <span className="xr-ac-metric-label">Engagement ↑</span>
+          <span className="xr-ac-metric-val is-up">{Math.round(ROI_BASE_CONVERSION_RATE * 100)}%</span>
+          <span className="xr-ac-metric-label">base conversion assumption</span>
         </div>
         <div className="xr-ac-metric-card">
-          <span className="xr-ac-metric-val is-good">−40%</span>
-          <span className="xr-ac-metric-label">Returns ↓</span>
+          <span className="xr-ac-metric-val is-good">−{returnReductionPct}%</span>
+          <span className="xr-ac-metric-label">benchmark return reduction</span>
         </div>
       </div>
       {impact !== undefined && (
         <div className="xr-ac-impact-card">
           <div>
             <div className="xr-ac-impact-val">${impact.toLocaleString()}</div>
-            <div className="xr-ac-impact-label">potential monthly impact</div>
+            <div className="xr-ac-impact-label">
+              estimated monthly impact at {Math.round(ROI_BASE_RETURN_RATE * 100)}% baseline returns
+            </div>
           </div>
-          <span className="xr-ac-impact-badge">estimated</span>
+          <span className="xr-ac-impact-badge">benchmark estimate</span>
         </div>
       )}
     </div>
@@ -234,7 +250,7 @@ function MetricsVisual({ report }: { report: XRReport | null }) {
 function Generating3DVisual({
   meshyProgress,
 }: {
-  meshyProgress: Array<{ product: string; progress: number }>;
+  meshyProgress: MeshyProgressItem[];
 }) {
   const overall =
     meshyProgress.length > 0
@@ -243,29 +259,38 @@ function Generating3DVisual({
 
   return (
     <div className="xr-ac-visual xr-ac-visual--3d">
-      <div className="xr-ac-3d-title">Generating 3D Models</div>
-      <div className="xr-ac-3d-overall-bar">
-        <div className="xr-ac-3d-overall-fill" style={{ width: `${overall}%` }} />
-      </div>
-      <div className="xr-ac-3d-overall-pct">{overall}% complete</div>
-      <div className="xr-ac-3d-items">
-        {meshyProgress.map((item, i) => (
-          <div key={i} className="xr-ac-3d-item">
-            <div className="xr-ac-3d-item-name">{item.product}</div>
-            <div className="xr-ac-3d-item-row">
-              <div className="xr-ac-3d-item-bar">
-                <div
-                  className="xr-ac-3d-item-fill"
-                  style={{ width: `${item.progress}%` }}
-                />
-              </div>
-              <span className="xr-ac-3d-item-pct">{item.progress}%</span>
-            </div>
+      <GlbPhaseLoader progress={overall} />
+    </div>
+  );
+}
+
+export function MeshyGenerationPreview({
+  meshyProgress,
+}: {
+  meshyProgress: MeshyProgressItem[];
+}) {
+  return (
+    <div className="xr-ac">
+      <div className="xr-ac-carousel">
+        <div className="xr-ac-slide xr-ac-slide--active">
+          <div className="xr-ac-slide-inner">
+            <div className="xr-ac-label">ANALYZING 04 / 04</div>
+            <h3 className="xr-ac-headline">Generating 3D Previews</h3>
+            <p className="xr-ac-subhead">
+              This is the standalone GLB generation loader shown while browser-ready 3D previews are being built.
+            </p>
+            <GlbPhaseLoader progress={overallProgress(meshyProgress)} />
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
+}
+
+function overallProgress(meshyProgress: MeshyProgressItem[]) {
+  return meshyProgress.length > 0
+    ? Math.round(meshyProgress.reduce((sum, item) => sum + item.progress, 0) / meshyProgress.length)
+    : 0;
 }
 
 // ─── Visual: Before / After reveal ───────────────────────────────────────────
@@ -313,7 +338,7 @@ function SlideVisual({
   storeUrl: string;
   report: XRReport | null;
   streamOpportunities?: string[] | null;
-  meshyProgress?: Array<{ product: string; progress: number }>;
+  meshyProgress?: MeshyProgressItem[];
 }) {
   if (slideIdx === 0) return <ConnectVisual storeUrl={storeUrl} />;
   if (slideIdx === 1) return <GridVisual report={report} />;
@@ -387,7 +412,7 @@ function SlideContent({
   storeUrl: string;
   report: XRReport | null;
   streamOpportunities?: string[] | null;
-  meshyProgress?: Array<{ product: string; progress: number }>;
+  meshyProgress?: MeshyProgressItem[];
 }) {
   return (
     <div className="xr-ac-slide-inner">
@@ -423,7 +448,7 @@ export function AnalysisProgress({
   storeUrl: string;
   streamProductCount?: number | null;
   streamOpportunities?: string[] | null;
-  meshyProgress?: Array<{ product: string; progress: number }>;
+  meshyProgress?: MeshyProgressItem[];
 }) {
   const [slideIdx, setSlideIdx] = useState(0);
   const [activeStep, setActiveStep] = useState(SLIDE_1.initStep);
@@ -431,8 +456,9 @@ export function AnalysisProgress({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [slide4Complete, setSlide4Complete] = useState(false);
   const completedRef = useRef(false);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+  const triggerComplete = useEffectEvent(() => {
+    onComplete();
+  });
 
   // Step/slide advancement — does NOT schedule onComplete
   useEffect(() => {
@@ -475,7 +501,7 @@ export function AnalysisProgress({
   // Separate effect: fire onComplete 800ms after slide4 finishes — never cancels itself
   useEffect(() => {
     if (!slide4Complete) return;
-    const t = window.setTimeout(() => onCompleteRef.current(), 800);
+    const t = window.setTimeout(() => triggerComplete(), 800);
     return () => window.clearTimeout(t);
   }, [slide4Complete]);
 

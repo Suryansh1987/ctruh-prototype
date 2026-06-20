@@ -21,29 +21,21 @@ const BACKGROUND_VALUES = ["Clean", "Cluttered", "N/A"] as const;
 const ANGLE_VALUES = ["Multiple", "Single", "N/A"] as const;
 const TEXTURE_VALUES = ["Excellent", "Good", "Poor", "N/A"] as const;
 
+const dimensionSchema = z.object({
+  score: z.number().min(1).max(10),
+  confidence: z.enum(CONFIDENCE_VALUES),
+  reason: z.string(),
+  missingOut: z.string(),
+  tip: z.string(),
+});
+
 const scoringSchema = z.object({
   category: z.enum(CATEGORY_VALUES),
   scores: z.object({
-    visualization3D: z.object({
-      score: z.number().min(1).max(10),
-      confidence: z.enum(CONFIDENCE_VALUES),
-      reason: z.string(),
-    }),
-    virtualTryOn: z.object({
-      score: z.number().min(1).max(10),
-      confidence: z.enum(CONFIDENCE_VALUES),
-      reason: z.string(),
-    }),
-    configurator: z.object({
-      score: z.number().min(1).max(10),
-      confidence: z.enum(CONFIDENCE_VALUES),
-      reason: z.string(),
-    }),
-    immersiveCommerce: z.object({
-      score: z.number().min(1).max(10),
-      confidence: z.enum(CONFIDENCE_VALUES),
-      reason: z.string(),
-    }),
+    visualization3D: dimensionSchema,
+    virtualTryOn: dimensionSchema,
+    configurator: dimensionSchema,
+    immersiveCommerce: dimensionSchema,
   }),
   assetQuality: z.object({
     score: z.number().min(1).max(10),
@@ -56,6 +48,15 @@ const scoringSchema = z.object({
 });
 
 type ScoringResponse = z.infer<typeof scoringSchema>;
+type ScoreContentPart =
+  | {
+      type: "image_url";
+      image_url: { url: string; detail: "low" };
+    }
+  | {
+      type: "text";
+      text: string;
+    };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -114,16 +115,17 @@ function normalizeEnum<T extends readonly string[]>(
 function normalizeDimension(
   value: unknown,
   fallbackReason: string,
+  fallbackMissingOut: string,
+  fallbackTip: string,
   fallbackScore = 5
 ): ScoringResponse["scores"]["visualization3D"] {
   const obj = asRecord(value);
   return {
     score: clampScore(obj?.score, fallbackScore),
     confidence: normalizeConfidence(obj?.confidence),
-    reason:
-      typeof obj?.reason === "string" && obj.reason.trim()
-        ? obj.reason.trim()
-        : fallbackReason,
+    reason: typeof obj?.reason === "string" && obj.reason.trim() ? obj.reason.trim() : fallbackReason,
+    missingOut: typeof obj?.missingOut === "string" && obj.missingOut.trim() ? obj.missingOut.trim() : fallbackMissingOut,
+    tip: typeof obj?.tip === "string" && obj.tip.trim() ? obj.tip.trim() : fallbackTip,
   };
 }
 
@@ -140,21 +142,29 @@ function buildFallbackResponse(product: NormalizedProduct): ScoringResponse {
         score: clampScore(5 + priceBoost),
         confidence: "Medium",
         reason: "Fallback score based on product details while the model response was incomplete.",
+        missingOut: "Shoppers can't inspect product details from every angle — they hesitate and abandon before buying.",
+        tip: "Start with a 360° spin model using existing product photos — low cost, immediate impact on purchase confidence.",
       },
       virtualTryOn: {
         score: clampScore(category === "Wearables" || category === "Accessories" || category === "Footwear" ? 7 : 4),
         confidence: "Medium",
         reason: "Fallback score based on category fit for virtual try-on.",
+        missingOut: "Customers guess if the product fits or suits them, leading to high return rates and lost repeat buyers.",
+        tip: "A try-on integration requires just one clean product image — launch a pilot on your top-selling wearable first.",
       },
       configurator: {
         score: clampScore(4 + variantBoost),
         confidence: "Medium",
         reason: "Fallback score based on detected variant count.",
+        missingOut: "Buyers can't visualize how color, material, or size options actually look — they pick safer (cheaper) alternatives.",
+        tip: "Build a live swatch previewer so customers click a color and instantly see the product update — no new photography needed.",
       },
       immersiveCommerce: {
         score: clampScore(5 + priceBoost),
         confidence: "Medium",
         reason: "Fallback score based on price point and category.",
+        missingOut: "Your store delivers a flat 2D experience while competitors offer immersive previews — premium customers notice.",
+        tip: "Run a 2-week AR pilot on your single highest-price product; the conversion data from this test justifies a full rollout.",
       },
     },
     assetQuality: {
@@ -191,21 +201,29 @@ function normalizeScoringResponse(raw: unknown, product: NormalizedProduct): Sco
       visualization3D: normalizeDimension(
         scoreContainer?.visualization3D ?? scoreContainer?.["3dVisualization"] ?? scoreContainer?.["3D Visualization"],
         "Normalized from a non-standard model response.",
+        "Shoppers can't inspect product details from every angle — they hesitate and abandon before buying.",
+        "Start with a 360° spin model using existing product photos — low cost, immediate impact on purchase confidence.",
         5
       ),
       virtualTryOn: normalizeDimension(
         scoreContainer?.virtualTryOn ?? scoreContainer?.["virtualTry-On"] ?? scoreContainer?.["Virtual Try-On"],
         "Normalized from a non-standard model response.",
+        "Customers guess if the product fits or suits them, leading to high return rates and lost repeat buyers.",
+        "A try-on integration requires just one clean product image — launch a pilot on your top-selling wearable first.",
         5
       ),
       configurator: normalizeDimension(
         scoreContainer?.configurator ?? scoreContainer?.["Configurator"],
         "Normalized from a non-standard model response.",
+        "Buyers can't visualize how color, material, or size options actually look — they pick safer (cheaper) alternatives.",
+        "Build a live swatch previewer so customers click a color and instantly see the product update — no new photography needed.",
         5
       ),
       immersiveCommerce: normalizeDimension(
         scoreContainer?.immersiveCommerce ?? scoreContainer?.immersiveShopping ?? scoreContainer?.["Immersive Commerce"],
         "Normalized from a non-standard model response.",
+        "Your store delivers a flat 2D experience while competitors offer immersive previews — premium customers notice.",
+        "Run a 2-week AR pilot on your single highest-price product; the conversion data from this test justifies a full rollout.",
         5
       ),
     },
@@ -232,16 +250,20 @@ Score this product on 4 XR dimensions (1-10 each):
 - configurator: How many meaningful variants exist to configure? (color, material, size combinations)
 - immersiveCommerce: Overall immersive shopping potential (premium feel, discovery value)
 
+For each dimension, include:
+- "missingOut": one crisp sentence on what revenue or customers the merchant loses TODAY without this XR feature
+- "tip": one concrete, actionable step they can take immediately to improve this dimension
+
 Also score the product image asset quality (1-10) for 3D asset generation readiness.
 
 Respond ONLY with valid JSON matching exactly this structure:
 {
   "category": "Wearables|Footwear|Jewellery|Home & Furniture|Beauty|Electronics|Accessories|Other",
   "scores": {
-    "visualization3D": { "score": 8, "confidence": "High|Medium|Low", "reason": "one sentence" },
-    "virtualTryOn": { "score": 7, "confidence": "High|Medium|Low", "reason": "one sentence" },
-    "configurator": { "score": 6, "confidence": "High|Medium|Low", "reason": "one sentence" },
-    "immersiveCommerce": { "score": 8, "confidence": "High|Medium|Low", "reason": "one sentence" }
+    "visualization3D": { "score": 8, "confidence": "High|Medium|Low", "reason": "one sentence", "missingOut": "one sentence", "tip": "one sentence" },
+    "virtualTryOn": { "score": 7, "confidence": "High|Medium|Low", "reason": "one sentence", "missingOut": "one sentence", "tip": "one sentence" },
+    "configurator": { "score": 6, "confidence": "High|Medium|Low", "reason": "one sentence", "missingOut": "one sentence", "tip": "one sentence" },
+    "immersiveCommerce": { "score": 8, "confidence": "High|Medium|Low", "reason": "one sentence", "missingOut": "one sentence", "tip": "one sentence" }
   },
   "assetQuality": {
     "score": 7,
@@ -256,7 +278,7 @@ Respond ONLY with valid JSON matching exactly this structure:
 async function scoreProduct(
   product: NormalizedProduct
 ): Promise<{ result: ScoringResponse; inputTokens: number; outputTokens: number }> {
-  const userContent: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [];
+  const userContent: ScoreContentPart[] = [];
 
   if (product.imageUrl) {
     userContent.push({
@@ -283,7 +305,7 @@ ${product.imageUrl ? "" : "No image available — score asset quality as N/A whe
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userContent },
     ],
-    max_tokens: 600,
+    max_tokens: 1200,
     temperature: 0.1,
   });
 
@@ -310,7 +332,7 @@ ${product.imageUrl ? "" : "No image available — score asset quality as N/A whe
           content: `Product: ${product.title}, Price: $${product.price}, Variants: ${product.variantCount}`,
         },
       ],
-      max_tokens: 600,
+      max_tokens: 1200,
       temperature: 0.1,
     });
     const retryRaw = retry.choices[0]?.message?.content ?? "{}";
@@ -326,6 +348,22 @@ ${product.imageUrl ? "" : "No image available — score asset quality as N/A whe
       outputTokens: outputTokens + (retry.usage?.completion_tokens ?? 0),
     };
   }
+}
+
+const XR_PRIORITY_LABELS: Record<string, string> = {
+  visualization3D: "3D Viewer",
+  virtualTryOn: "Virtual Try-On",
+  configurator: "Configurator",
+  immersiveCommerce: "AR Placement",
+};
+
+function determineXRPriority(result: ScoringResponse): { xrPriority: string; xrPriorityReason: string } {
+  const entries = Object.entries(result.scores) as [keyof ScoringResponse["scores"], ScoringResponse["scores"]["visualization3D"]][];
+  const top = entries.reduce((a, b) => (b[1].score > a[1].score ? b : a));
+  return {
+    xrPriority: XR_PRIORITY_LABELS[top[0]] ?? "3D Viewer",
+    xrPriorityReason: top[1].reason,
+  };
 }
 
 export async function scoreAllProducts(
@@ -360,12 +398,15 @@ export async function scoreAllProducts(
         result.category
       );
 
+      const { xrPriority, xrPriorityReason } = determineXRPriority(result);
       scoredProducts.push({
         ...product,
         category: result.category,
         xrScores: result.scores,
         assetQuality: result.assetQuality,
         overallXRScore,
+        xrPriority,
+        xrPriorityReason,
         glbUrl: null,
         previewImageUrl: null,
       });

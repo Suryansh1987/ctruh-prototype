@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnalysisProgress } from "./analysis-progress";
 import { ResultsView } from "./results-view";
 import { RightPanelCarousel } from "./right-panel-carousel";
+import { useToast } from "@/components/toast";
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from "@/lib/contact";
 import type { XRReport } from "@/lib/types";
 
@@ -56,7 +57,10 @@ export function UrlInputForm({
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
-  const [verifiedIdentity, setVerifiedIdentity] = useState<string | null>(null);
+  const [verifiedIdentity, setVerifiedIdentity] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.sessionStorage.getItem("ctruh_verified_identity");
+  });
   const [pendingAnalyzeUrl, setPendingAnalyzeUrl] = useState<string | null>(null);
 
   const [lookupOpen] = useState(false);
@@ -83,13 +87,9 @@ export function UrlInputForm({
 
   const transitionTimerIds = useRef<number[]>([]);
   const transitionFired = useRef(false);
+  const { toast } = useToast();
 
   useEffect(() => () => transitionTimerIds.current.forEach(window.clearTimeout), []);
-
-  useEffect(() => {
-    const savedIdentity = window.sessionStorage.getItem("ctruh_verified_identity");
-    if (savedIdentity) setVerifiedIdentity(savedIdentity);
-  }, []);
 
   useEffect(() => {
     if (appState !== "idle") return;
@@ -102,13 +102,6 @@ export function UrlInputForm({
     }, 3000);
     return () => window.clearInterval(interval);
   }, [appState]);
-
-  useEffect(() => {
-    const currentIdentity = contactIdentity(email, phone);
-    if (!verifiedIdentity || verifiedIdentity === currentIdentity) return;
-    setVerificationSent(false);
-    setVerificationCode("");
-  }, [email, phone, verifiedIdentity]);
 
   useEffect(() => {
     if (appState !== "report") return;
@@ -225,13 +218,11 @@ export function UrlInputForm({
         }
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong generating your report. Try again.";
       setRequestPending(false);
       setAppState("idle");
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong generating your report. Try again."
-      );
+      setError(msg);
+      toast("Analysis failed", msg, "error");
     }
   }
 
@@ -263,7 +254,9 @@ export function UrlInputForm({
       setVerificationSent(true);
       return true;
     } catch (err) {
-      setVerificationError(err instanceof Error ? err.message : "Could not send verification email.");
+      const msg = err instanceof Error ? err.message : "Could not send verification email.";
+      setVerificationError(msg);
+      toast("Verification failed", msg, "error");
       return false;
     } finally {
       setVerificationPending(false);
@@ -301,7 +294,9 @@ export function UrlInputForm({
         void runAnalysis(target);
       }
     } catch (err) {
-      setVerificationError(err instanceof Error ? err.message : "Verification failed.");
+      const msg = err instanceof Error ? err.message : "Verification failed.";
+      setVerificationError(msg);
+      toast("Code incorrect", msg, "error");
     } finally {
       setVerificationPending(false);
     }
@@ -356,7 +351,9 @@ export function UrlInputForm({
       if (!res.ok) throw new Error(data.error || "Could not fetch reports.");
       setOwnedReports(data.reports || []);
     } catch (err) {
-      setLookupError(err instanceof Error ? err.message : "Could not fetch reports.");
+      const msg = err instanceof Error ? err.message : "Could not fetch reports.";
+      setLookupError(msg);
+      toast("Could not load reports", msg, "error");
     } finally {
       setLookupPending(false);
     }
@@ -380,6 +377,19 @@ export function UrlInputForm({
   }
 
   const visibleChips = CHIP_GROUPS[chipGroupIndex];
+
+  function handleContactInput(next: { email?: string; phone?: string }) {
+    const nextEmail = next.email ?? email;
+    const nextPhone = next.phone ?? phone;
+
+    if (next.email !== undefined) setEmail(next.email);
+    if (next.phone !== undefined) setPhone(next.phone);
+
+    if (verifiedIdentity && verifiedIdentity !== contactIdentity(nextEmail, nextPhone)) {
+      setVerificationSent(false);
+      setVerificationCode("");
+    }
+  }
 
   return (
     <div className="xr-input-shell">
@@ -456,7 +466,7 @@ export function UrlInputForm({
 
               <div className="xr-label">Powered by Ctruh</div>
               <h1 className="xr-headline">
-                {["Discover Your XR", "Potential"].map((line, i) => (
+                {["Find Your 3D + AR", "Opportunity"].map((line, i) => (
                   <span key={line} className="xr-headline-line">
                     <span
                       className="xr-headline-word"
@@ -468,8 +478,8 @@ export function UrlInputForm({
                 ))}
               </h1>
               <p className="xr-subtext">
-                Paste your Shopify URL. See which products could earn more with 3D
-                and AR in 60 seconds.
+                Paste your Shopify URL to see which products are best suited for 3D viewers,
+                AR, virtual try-on, and higher-conversion shopping experiences.
               </p>
               <div className="xr-input-anchor">
                 {appState === "analyzing" ? (
@@ -509,7 +519,7 @@ export function UrlInputForm({
                           <input
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => handleContactInput({ email: e.target.value })}
                             placeholder="Email address"
                             className="xr-input"
                             disabled={requestPending || verificationSent}
@@ -520,7 +530,7 @@ export function UrlInputForm({
                           <input
                             type="tel"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            onChange={(e) => handleContactInput({ phone: e.target.value })}
                             placeholder="Phone number"
                             className="xr-input"
                             disabled={requestPending || verificationSent}
@@ -633,8 +643,8 @@ export function UrlInputForm({
             />
             <div className="xr-label">Powered by Ctruh</div>
             <h1 className="xr-headline xr-report-hero-title">
-              <span className="xr-headline-line">Discover Your XR</span>
-              <span className="xr-headline-line">Potential</span>
+              <span className="xr-headline-line">Your 3D + AR</span>
+              <span className="xr-headline-line">Opportunity Report</span>
             </h1>
             <div className="xr-report-pill-row">
               <div className="xr-pill-input">
