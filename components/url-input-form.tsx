@@ -30,9 +30,7 @@ type OwnedReport = {
 };
 
 const CHIP_GROUPS = [
-  ["gymshark.com", "mejuri.com", "burrow.com"],
-  ["burrow.com", "mvmtwatches.com", "diff.com"],
-  ["diff.com", "gymshark.com", "mejuri.com"],
+  ["mvmt.com", "mejuri.com", "gymshark.com"],
 ];
 
 function normalizeLabel(input: string): string {
