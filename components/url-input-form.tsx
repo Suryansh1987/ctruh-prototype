@@ -30,8 +30,7 @@ type OwnedReport = {
 };
 
 const CHIP_GROUPS = [
-  ["mvmt.com", "mejuri.com", "gymshark.com"],
-  ["kith.com", "mejuri.com", "gymshark.com"],
+  ["mvmt.com", "mejuri.com", "bohme.com"],
 ];
 
 function normalizeLabel(input: string): string {
@@ -498,7 +497,7 @@ export function UrlInputForm({
                             type="text"
                             value={url}
                             onChange={(e) => setUrl(e.target.value)}
-                            placeholder={appState === "idle" ? "e.g. gymshark.com" : ""}
+                            placeholder={appState === "idle" ? "e.g. kith.com" : ""}
                             className="xr-input"
                             disabled={requestPending}
                             autoFocus={appState === "idle"}
