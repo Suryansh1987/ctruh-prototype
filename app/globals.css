@@ -3114,10 +3114,21 @@ a {
     margin-top: 20px;
   }
 
-  /* ── Input row → stacked ── */
+  /* ── Input row → stacked, same size as contact form ── */
+  .xr-input-card {
+    width: 100%;
+  }
+
   .xr-input-row {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+  }
+
+  .xr-input-row .xr-input-wrapper {
+    flex: none;
+    width: 100%;
+    height: 56px;
   }
 
   .xr-primary-button,
