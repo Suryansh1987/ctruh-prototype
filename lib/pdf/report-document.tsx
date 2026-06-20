@@ -103,7 +103,7 @@ const s = StyleSheet.create({
   scoreChipText: { fontSize: 8, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
 
   // Product detail page
-  productPageInner: { padding: 32 },
+  productPageInner: { padding: 24 },
   productTitle: {
     fontSize: 16, fontFamily: "Helvetica-Bold", color: BLUE_DEEP, marginBottom: 4,
   },
@@ -126,10 +126,10 @@ const s = StyleSheet.create({
   },
   baTagAfter: { color: BLUE, backgroundColor: BLUE_LIGHT },
   baImgBox: {
-    width: "100%", height: 128, backgroundColor: GRAY_100,
+    width: "100%", height: 100, backgroundColor: GRAY_100,
     borderRadius: 8, overflow: "hidden", borderColor: BLUE_BORDER, borderWidth: 1,
   },
-  baImg: { width: "100%", height: 128, objectFit: "contain" },
+  baImg: { width: "100%", height: 100, objectFit: "contain" },
   baPlaceholder: {
     width: "100%", height: 128, backgroundColor: BLUE_LIGHT,
     borderRadius: 8, borderColor: BLUE_BORDER, borderWidth: 1,
@@ -140,7 +140,7 @@ const s = StyleSheet.create({
   baArrow: { width: 28, alignItems: "center", justifyContent: "center", paddingTop: 50 },
   baArrowText: { fontSize: 18, color: BLUE, fontFamily: "Helvetica-Bold" },
 
-  scoresBlock: { flex: 1 },
+  scoresBlock: {},
   dimensionRow: {
     marginBottom: 8, backgroundColor: GRAY_100, borderRadius: 6, padding: 8,
   },
@@ -321,17 +321,17 @@ function DimensionBlock({
       <View style={s.progressBar}>
         <View style={[s.progressFill, { width: fillPct as string, backgroundColor: color }]} />
       </View>
-      <Text style={s.dimensionReason}>{clampText(reason, 140)}</Text>
+      <Text style={s.dimensionReason}>{clampText(reason, 90)}</Text>
       {missingOut ? (
-        <View style={{ flexDirection: "row", marginTop: 3, gap: 4 }}>
-          <Text style={{ fontSize: 6.5, color: RED, fontFamily: "Helvetica-Bold" }}>Missing out: </Text>
-          <Text style={{ fontSize: 6.5, color: GRAY_600, flex: 1 }}>{clampText(missingOut, 120)}</Text>
+        <View style={{ flexDirection: "row", marginTop: 3, gap: 3 }}>
+          <Text style={{ fontSize: 6, color: RED, fontFamily: "Helvetica-Bold", flexShrink: 0 }}>↓ </Text>
+          <Text style={{ fontSize: 6, color: GRAY_600, flex: 1 }}>{clampText(missingOut, 85)}</Text>
         </View>
       ) : null}
       {tip ? (
-        <View style={{ flexDirection: "row", marginTop: 3, gap: 4 }}>
-          <Text style={{ fontSize: 6.5, color: GREEN, fontFamily: "Helvetica-Bold" }}>Quick fix: </Text>
-          <Text style={{ fontSize: 6.5, color: GRAY_600, flex: 1 }}>{clampText(tip, 120)}</Text>
+        <View style={{ flexDirection: "row", marginTop: 2, gap: 3 }}>
+          <Text style={{ fontSize: 6, color: GREEN, fontFamily: "Helvetica-Bold", flexShrink: 0 }}>→ </Text>
+          <Text style={{ fontSize: 6, color: GRAY_600, flex: 1 }}>{clampText(tip, 85)}</Text>
         </View>
       ) : null}
     </View>
@@ -509,24 +509,24 @@ function OverviewPage({ report }: { report: XRReport }) {
         ))}
 
         {report.storeInsights?.length > 0 && (
-          <View style={{ marginTop: 16 }}>
+          <View style={{ marginTop: 12 }}>
             <Text style={s.oppTitle}>Store insights</Text>
-            {report.storeInsights.slice(0, 4).map((insight, i) => (
-              <View key={i} style={[s.oppItem, { backgroundColor: BLUE_LIGHT }]}>
+            {report.storeInsights.slice(0, 2).map((insight, i) => (
+              <View key={i} style={[s.oppItem, { backgroundColor: BLUE_LIGHT, paddingVertical: 7 }]}>
                 <View style={[s.oppDot, { backgroundColor: BLUE }]} />
-                <Text style={s.oppText}>{clampText(insight, 110)}</Text>
+                <Text style={s.oppText}>{clampText(insight, 88)}</Text>
               </View>
             ))}
           </View>
         )}
 
         {report.quickWins?.length > 0 && (
-          <View style={{ marginTop: 12 }}>
+          <View style={{ marginTop: 10 }}>
             <Text style={[s.oppTitle, { color: GREEN }]}>Quick wins — start here</Text>
-            {report.quickWins.slice(0, 3).map((win, i) => (
-              <View key={i} style={[s.oppItem, { backgroundColor: "#e8fff7", borderRadius: 6 }]}>
+            {report.quickWins.slice(0, 2).map((win, i) => (
+              <View key={i} style={[s.oppItem, { backgroundColor: "#e8fff7", borderRadius: 6, paddingVertical: 7 }]}>
                 <View style={[s.oppDot, { backgroundColor: GREEN }]} />
-                <Text style={[s.oppText, { color: "#005738" }]}>{clampText(win, 110)}</Text>
+                <Text style={[s.oppText, { color: "#005738" }]}>{clampText(win, 88)}</Text>
               </View>
             ))}
           </View>
@@ -537,7 +537,7 @@ function OverviewPage({ report }: { report: XRReport }) {
 }
 
 function HeatmapPage({ products }: { products: ScoredProduct[] }) {
-  const sorted = [...products].sort((a, b) => b.overallXRScore - a.overallXRScore);
+  const sorted = [...products].sort((a, b) => b.overallXRScore - a.overallXRScore).slice(0, 15);
 
   const colWidths = { name: "32%", cat: "13%", score: "9%", viz: "9%", tryon: "9%", config: "9%", immersive: "9%", asset: "10%" };
 
@@ -626,39 +626,43 @@ function ProductDetailPage({
 
         <BeforeAfterBlock product={product} />
 
-        <View style={s.scoresBlock}>
-          <DimensionBlock
-            label="3D Viewing Impact"
-            score={product.xrScores.visualization3D.score}
-            confidence={confidenceLabel(product.xrScores.visualization3D.confidence)}
-            reason={product.xrScores.visualization3D.reason}
-            missingOut={product.xrScores.visualization3D.missingOut}
-            tip={product.xrScores.visualization3D.tip}
-          />
-          <DimensionBlock
-            label="Try-On Potential"
-            score={product.xrScores.virtualTryOn.score}
-            confidence={confidenceLabel(product.xrScores.virtualTryOn.confidence)}
-            reason={product.xrScores.virtualTryOn.reason}
-            missingOut={product.xrScores.virtualTryOn.missingOut}
-            tip={product.xrScores.virtualTryOn.tip}
-          />
-          <DimensionBlock
-            label="Style Switching Value"
-            score={product.xrScores.configurator.score}
-            confidence={confidenceLabel(product.xrScores.configurator.confidence)}
-            reason={product.xrScores.configurator.reason}
-            missingOut={product.xrScores.configurator.missingOut}
-            tip={product.xrScores.configurator.tip}
-          />
-          <DimensionBlock
-            label="High-Ticket Confidence"
-            score={product.xrScores.immersiveCommerce.score}
-            confidence={confidenceLabel(product.xrScores.immersiveCommerce.confidence)}
-            reason={product.xrScores.immersiveCommerce.reason}
-            missingOut={product.xrScores.immersiveCommerce.missingOut}
-            tip={product.xrScores.immersiveCommerce.tip}
-          />
+        <View style={[s.scoresBlock, { flexDirection: "row", gap: 8, marginBottom: 10 }]}>
+          <View style={{ flex: 1 }}>
+            <DimensionBlock
+              label="3D Viewing Impact"
+              score={product.xrScores.visualization3D.score}
+              confidence={confidenceLabel(product.xrScores.visualization3D.confidence)}
+              reason={product.xrScores.visualization3D.reason}
+              missingOut={product.xrScores.visualization3D.missingOut}
+              tip={product.xrScores.visualization3D.tip}
+            />
+            <DimensionBlock
+              label="Style Switching Value"
+              score={product.xrScores.configurator.score}
+              confidence={confidenceLabel(product.xrScores.configurator.confidence)}
+              reason={product.xrScores.configurator.reason}
+              missingOut={product.xrScores.configurator.missingOut}
+              tip={product.xrScores.configurator.tip}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <DimensionBlock
+              label="Try-On Potential"
+              score={product.xrScores.virtualTryOn.score}
+              confidence={confidenceLabel(product.xrScores.virtualTryOn.confidence)}
+              reason={product.xrScores.virtualTryOn.reason}
+              missingOut={product.xrScores.virtualTryOn.missingOut}
+              tip={product.xrScores.virtualTryOn.tip}
+            />
+            <DimensionBlock
+              label="High-Ticket Confidence"
+              score={product.xrScores.immersiveCommerce.score}
+              confidence={confidenceLabel(product.xrScores.immersiveCommerce.confidence)}
+              reason={product.xrScores.immersiveCommerce.reason}
+              missingOut={product.xrScores.immersiveCommerce.missingOut}
+              tip={product.xrScores.immersiveCommerce.tip}
+            />
+          </View>
         </View>
 
         <View style={s.assetBox}>

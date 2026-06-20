@@ -2462,20 +2462,15 @@ a {
 }
 
 .xr-ac-conn-node {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  border: 1px solid #d0deff;
-  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0 87 255 / 0.12);
 }
 
 .xr-ac-conn-logo {
-  height: 22px;
-  filter: brightness(0) saturate(100%) invert(18%) sepia(100%) saturate(5000%) hue-rotate(217deg);
+  height: 28px;
+  filter: brightness(0) saturate(100%) invert(100%);
+  opacity: 0.9;
 }
 
 /* Slide 2: product grid */
@@ -3029,22 +3024,38 @@ a {
 }
 
 @media (max-width: 767px) {
+  /* ── Layout grids → single column ── */
   .xr-idle-shell,
   .xr-loading-stage,
   .xr-compare-grid,
   .xr-roi-grid,
-  .xr-build-grid {
+  .xr-build-grid,
+  .xr-visual-grid {
     grid-template-columns: 1fr;
   }
 
+  /* ── Hide desktop-only panels ── */
   .xr-idle-right,
+  .xr-analyzing-right,
   .xr-divider,
   .xr-loading-side,
   .xr-deco-squares {
+    display: none !important;
+  }
+
+  /* ── Left panel takes full width ── */
+  .xr-idle-left {
+    width: 100%;
+    min-height: 100vh;
+    padding: 20px;
+    padding-bottom: 40px;
+  }
+
+  .xr-idle-left::after {
     display: none;
   }
 
-  .xr-idle-left,
+  /* ── Sidebar paddings ── */
   .xr-loading-topbar,
   .xr-report-shell,
   .xr-transition-stage {
@@ -3052,10 +3063,26 @@ a {
     padding-right: 20px;
   }
 
+  /* ── Content sizing ── */
   .xr-idle-content {
-    min-height: calc(100vh - 40px);
+    min-height: auto;
+    padding: 24px 0 20px;
+    max-width: 100%;
   }
 
+  .xr-headline {
+    font-size: 36px;
+  }
+
+  .xr-subtext {
+    font-size: 15px;
+  }
+
+  .xr-input-anchor {
+    width: 100%;
+  }
+
+  /* ── Input row → stacked ── */
   .xr-input-row {
     flex-direction: column;
     align-items: stretch;
@@ -3064,23 +3091,46 @@ a {
   .xr-primary-button,
   .xr-secondary-button {
     width: 100%;
+    min-height: 48px;
   }
 
-  .xr-right-carousel {
-    display: none;
+  /* ── Chips ── */
+  .xr-chip-row {
+    gap: 8px;
   }
 
+  /* ── Hide carousel in desktop right panel ── */
+  .xr-right-carousel,
   .xr-right-carousel-arrow {
     display: none;
   }
 
-  .xr-panel-visual {
-    width: 100%;
-    max-width: 260px;
+  /* ── Report shell ── */
+  .xr-report-stage {
+    padding: 20px 0 32px;
   }
 
+  .xr-report-hero {
+    padding: 0 16px;
+  }
+
+  .xr-section-heading h2 {
+    font-size: 22px;
+  }
+
+  .xr-stats-bar {
+    gap: 8px;
+    padding: 14px 0;
+  }
+
+  .xr-panel-visual {
+    width: 100%;
+    max-width: 240px;
+  }
+
+  /* ── Analysis carousel ── */
   .xr-analysis-carousel {
-    min-height: 760px;
+    min-height: 680px;
   }
 
   .xr-analysis-visual,
@@ -3092,12 +3142,68 @@ a {
     grid-template-columns: 1fr;
   }
 
-  .xr-loading-side {
+  /* ── Tables scroll horizontally ── */
+  .xr-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Before/after grid ── */
+  .xr-ba-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .xr-ba-arrow {
     display: none;
   }
 
-  .xr-table-wrap {
-    overflow-x: auto;
+  /* ── Reports page ── */
+  .rp-header {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .rp-body {
+    padding: 28px 16px 60px;
+  }
+
+  .rp-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .rp-card-meta {
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .rp-card-actions {
+    flex-wrap: wrap;
+  }
+
+  /* ── Footer CTA ── */
+  .xr-footer-cta {
+    padding: 40px 16px 60px;
+  }
+
+  .xr-footer-cta h2 {
+    font-size: 22px;
+  }
+
+  .xr-footer-cta p {
+    font-size: 15px;
+  }
+
+  /* ── Analysis card on mobile — show in left panel ── */
+  .xr-ac {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 16px;
+    border-radius: 16px;
   }
 }
 

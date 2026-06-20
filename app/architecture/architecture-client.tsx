@@ -136,9 +136,8 @@ function WeightRow({ cat, v3d, vto, cfg, imm, delay = 0 }: {
     </div>
   );
   return (
-    <div ref={ref} style={{
-      display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr 1fr",
-      alignItems: "center", gap: 12, padding: "12px 0",
+    <div ref={ref} className="arch-weight-grid" style={{
+      alignItems: "center", padding: "12px 0",
       borderBottom: "1px solid rgba(255,255,255,0.06)",
       opacity: visible ? 1 : 0,
       transition: `opacity 400ms ${delay}ms ease`,
@@ -319,6 +318,48 @@ export default function ArchitectureClient() {
           opacity: 0;
           animation: fadeUp 600ms ease forwards;
         }
+        /* ── Responsive layout helpers ── */
+        .arch-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+        .arch-cost-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
+        .arch-section { padding: 80px 32px; }
+        .arch-section-inner { max-width: 1080px; margin: 0 auto; }
+        .arch-hero-floats { display: block; }
+        .arch-weight-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .arch-weight-grid {
+          display: grid;
+          grid-template-columns: 130px 1fr 1fr 1fr 1fr;
+          gap: 12px;
+          min-width: 520px;
+        }
+
+        @media (max-width: 767px) {
+          .arch-hero-floats { display: none; }
+
+          .arch-section { padding: 52px 16px; }
+
+          .arch-2col { grid-template-columns: 1fr; gap: 32px; }
+          .arch-cost-split { grid-template-columns: 1fr; }
+
+          .arch-weight-grid {
+            grid-template-columns: 100px 1fr 1fr 1fr 1fr;
+            min-width: 460px;
+          }
+
+          .arch-hero-metrics {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .arch-hero-metrics > div {
+            flex: 1;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .arch-weight-grid {
+            grid-template-columns: 90px 1fr 1fr 1fr 1fr;
+            min-width: 400px;
+          }
+        }
       `}</style>
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
@@ -343,7 +384,8 @@ export default function ArchitectureClient() {
           pointerEvents: "none",
         }} />
 
-        {/* Floating stat cards */}
+        {/* Floating stat cards — hidden on mobile via .arch-hero-floats */}
+        <div className="arch-hero-floats" style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", top: "18%", left: "8%", width: 148,
           background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
@@ -374,6 +416,7 @@ export default function ArchitectureClient() {
           <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", marginTop: 6, lineHeight: 1 }}>3×</div>
           <div style={{ fontSize: 9, color: "#fb923c", marginTop: 6, lineHeight: 1.3 }}>Zero data loss</div>
         </div>
+        </div>{/* end arch-hero-floats */}
 
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{
@@ -392,7 +435,7 @@ export default function ArchitectureClient() {
             From a Shopify URL to a full XR readiness report in under 60 seconds — here&apos;s exactly how we do it, what it costs, and where we&apos;re headed.
           </p>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+          <div className="arch-hero-metrics" style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
             {[
               { val: 45, prefix: "₹", suffix: "", label: "per full report" },
               { val: 14, prefix: "₹", suffix: "", label: "for 2 AI calls only" },
@@ -414,7 +457,7 @@ export default function ArchitectureClient() {
       </section>
 
       {/* ── Pipeline ─────────────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 32px", maxWidth: 1080, margin: "0 auto" }}>
+      <section className="arch-section" style={{ maxWidth: 1080, margin: "0 auto" }}>
         <SectionHeader
           label="Pipeline"
           title="5-Stage Analysis Engine"
@@ -456,8 +499,8 @@ export default function ArchitectureClient() {
       </section>
 
       {/* ── Scoring engine ───────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 32px", background: "rgba(0,0,0,0.2)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+      <section className="arch-section" style={{ background: "rgba(0,0,0,0.2)" }}>
+        <div className="arch-section-inner">
           <SectionHeader
             label="Scoring Engine"
             title="4 XR Dimensions × Category Weights"
@@ -470,14 +513,12 @@ export default function ArchitectureClient() {
             <DimCard icon="✨" name="Immersive Commerce" desc="Premium feel, discovery value, overall wow factor in an AR/VR context." weight="~25%" delay={240} />
           </div>
 
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "24px 28px" }}>
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "24px 20px" }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>
               Category Weight Matrix
             </div>
-            <div style={{
-              display: "grid", gridTemplateColumns: "130px 1fr 1fr 1fr 1fr",
-              gap: 12, paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.1)",
-            }}>
+            <div className="arch-weight-wrap">
+            <div className="arch-weight-grid" style={{ paddingBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
               <div />
               {[{ label: "3D Vis", color: "#6ba3ff" }, { label: "Try-On", color: "#a78bfa" }, { label: "Config", color: "#34d399" }, { label: "Immersive", color: "#fb923c" }]
                 .map(({ label, color }) => (
@@ -491,18 +532,19 @@ export default function ArchitectureClient() {
             <WeightRow cat="Beauty"           v3d={0.30} vto={0.25} cfg={0.10} imm={0.35} delay={240} />
             <WeightRow cat="Electronics"      v3d={0.40} vto={0.05} cfg={0.35} imm={0.20} delay={300} />
             <WeightRow cat="Accessories"      v3d={0.25} vto={0.30} cfg={0.20} imm={0.25} delay={360} />
-          </div>
-        </div>
+            </div>{/* arch-weight-wrap */}
+          </div>{/* weight container */}
+        </div>{/* arch-section-inner */}
       </section>
 
       {/* ── Fallback chain ───────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 32px", maxWidth: 1080, margin: "0 auto" }}>
+      <section className="arch-section" style={{ maxWidth: 1080, margin: "0 auto" }}>
         <SectionHeader
           label="Resilience"
           title="3-Layer Fallback Chain"
           sub="No data loss from a flaky model response. Every scoring call has three tries before we touch any heuristics."
         />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48 }}>
+        <div className="arch-2col">
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 24 }}>
               Scraping Strategy
@@ -537,8 +579,8 @@ export default function ArchitectureClient() {
       </section>
 
       {/* ── Cost breakdown ───────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 32px", background: "rgba(0,0,0,0.2)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+      <section className="arch-section" style={{ background: "rgba(0,0,0,0.2)" }}>
+        <div className="arch-section-inner">
           <SectionHeader
             label="Cost Engineering"
             title="₹45 per Full Report"
@@ -555,7 +597,7 @@ export default function ArchitectureClient() {
               note="Firecrawl billing only triggers as last-resort fallback" color="#fb923c" delay={240} />
           </div>
 
-          <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="arch-cost-split">
             <div style={{ background: "rgba(0,87,255,0.08)", border: "1px solid rgba(0,87,255,0.25)", borderRadius: 14, padding: "20px 24px" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(0,87,255,0.7)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Just 2 AI calls</div>
               <div style={{ fontSize: 36, fontWeight: 800, color: "#fff", marginBottom: 6 }}>₹14</div>
@@ -575,7 +617,7 @@ export default function ArchitectureClient() {
       </section>
 
       {/* ── 3D generation roadmap ────────────────────────────────────────── */}
-      <section style={{ padding: "80px 32px", maxWidth: 1080, margin: "0 auto" }}>
+      <section className="arch-section" style={{ maxWidth: 1080, margin: "0 auto" }}>
         <SectionHeader
           label="3D Generation"
           title="Meshy Today → Local GPU Tomorrow"
@@ -610,8 +652,8 @@ export default function ArchitectureClient() {
       </section>
 
       {/* ── Infrastructure ───────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 32px", background: "rgba(0,0,0,0.2)" }}>
-        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+      <section className="arch-section" style={{ background: "rgba(0,0,0,0.2)" }}>
+        <div className="arch-section-inner">
           <SectionHeader
             label="Infrastructure"
             title="Caching, Queuing & Scale"
@@ -641,7 +683,7 @@ export default function ArchitectureClient() {
       </section>
 
       {/* ── Tech stack ───────────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 32px", maxWidth: 1080, margin: "0 auto" }}>
+      <section className="arch-section" style={{ maxWidth: 1080, margin: "0 auto" }}>
         <SectionHeader
           label="Stack"
           title="What We Built With"
@@ -686,8 +728,25 @@ export default function ArchitectureClient() {
         </div>
       </section>
 
-      <footer style={{ padding: "24px 32px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <footer style={{ padding: "24px 32px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.3)" }}>CTRUH</div>
+        <a
+          href="https://www.linkedin.com/in/suryansh-singh-972754242/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.45)",
+            textDecoration: "none", background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.1)", borderRadius: 999,
+            padding: "5px 14px", transition: "all 180ms",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; (e.currentTarget as HTMLAnchorElement).style.background = "rgba(0,87,255,0.2)"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(0,87,255,0.4)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.45)"; (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.1)"; }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          Made by Suryansh Singh
+        </a>
         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>XR Commerce Intelligence</div>
       </footer>
     </div>
