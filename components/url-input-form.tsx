@@ -59,7 +59,7 @@ export function UrlInputForm({
   const [verifiedIdentity, setVerifiedIdentity] = useState<string | null>(null);
   const [pendingAnalyzeUrl, setPendingAnalyzeUrl] = useState<string | null>(null);
 
-  const [lookupOpen, setLookupOpen] = useState(false);
+  const [lookupOpen] = useState(false);
   const [lookupEmail, setLookupEmail] = useState("");
   const [lookupPhone, setLookupPhone] = useState("");
   const [lookupPending, setLookupPending] = useState(false);
@@ -75,6 +75,7 @@ export function UrlInputForm({
   const [progressDone, setProgressDone] = useState(false);
   const [streamProductCount, setStreamProductCount] = useState<number | null>(null);
   const [streamOpportunities, setStreamOpportunities] = useState<string[] | null>(null);
+  const [meshyProgress, setMeshyProgress] = useState<Array<{ product: string; progress: number }>>([]);
   const [chipGroupIndex, setChipGroupIndex] = useState(0);
   const [chipsFading, setChipsFading] = useState(false);
   const [clickedChip, setClickedChip] = useState<string | null>(null);
@@ -161,6 +162,7 @@ export function UrlInputForm({
     setProgressDone(false);
     setStreamProductCount(null);
     setStreamOpportunities(null);
+    setMeshyProgress([]);
     setRequestPending(true);
     transitionFired.current = false;
     transitionTimerIds.current = [];
@@ -200,12 +202,21 @@ export function UrlInputForm({
             opportunities?: string[];
             data?: XRReport;
             message?: string;
+            product?: string;
+            taskIndex?: number;
+            progress?: number;
           };
 
           if (event.type === "scraped" && event.count != null) {
             setStreamProductCount(event.count);
           } else if (event.type === "scored" && event.opportunities) {
             setStreamOpportunities(event.opportunities);
+          } else if (event.type === "meshy_progress" && event.product != null && event.taskIndex != null) {
+            setMeshyProgress((prev) => {
+              const next = [...prev];
+              next[event.taskIndex!] = { product: event.product!, progress: event.progress ?? 0 };
+              return next;
+            });
           } else if (event.type === "report" && event.data) {
             setPendingReport(event.data);
           } else if (event.type === "error") {
@@ -382,13 +393,9 @@ export function UrlInputForm({
             />
             <div className="xr-idle-content">
               <div className="xr-reports-toggle-row">
-                <button
-                  type="button"
-                  className="xr-link-button"
-                  onClick={() => setLookupOpen((current) => !current)}
-                >
-                  {lookupOpen ? "Hide my reports" : "View your reports"}
-                </button>
+                <a href="/reports" className="xr-link-button">
+                  View your reports →
+                </a>
               </div>
 
               {lookupOpen && (
@@ -609,6 +616,7 @@ export function UrlInputForm({
                 storeUrl={url}
                 streamProductCount={streamProductCount}
                 streamOpportunities={streamOpportunities}
+                meshyProgress={meshyProgress}
               />
             </aside>
           )}

@@ -24,6 +24,14 @@ export const emailVerifications = pgTable("email_verifications", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+export interface GlbEntry {
+  productId: number;
+  title: string;
+  glbUrl: string;
+  previewImageUrl: string | null;
+  score: number;
+}
+
 export const reports = pgTable("reports", {
   id: uuid("id").primaryKey().defaultRandom(),
   contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
@@ -34,6 +42,7 @@ export const reports = pgTable("reports", {
   productCount: integer("product_count"),
   xrReadinessScore: decimal("xr_readiness_score", { precision: 4, scale: 2 }),
   topOpportunities: jsonb("top_opportunities").$type<string[]>(),
+  glbUrls: jsonb("glb_urls").$type<GlbEntry[]>(),
   pdfUrl: text("pdf_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

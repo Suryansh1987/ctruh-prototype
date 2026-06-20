@@ -229,6 +229,45 @@ function MetricsVisual({ report }: { report: XRReport | null }) {
   );
 }
 
+// ─── Visual: Meshy 3D generation progress ────────────────────────────────────
+
+function Generating3DVisual({
+  meshyProgress,
+}: {
+  meshyProgress: Array<{ product: string; progress: number }>;
+}) {
+  const overall =
+    meshyProgress.length > 0
+      ? Math.round(meshyProgress.reduce((s, p) => s + p.progress, 0) / meshyProgress.length)
+      : 0;
+
+  return (
+    <div className="xr-ac-visual xr-ac-visual--3d">
+      <div className="xr-ac-3d-title">Generating 3D Models</div>
+      <div className="xr-ac-3d-overall-bar">
+        <div className="xr-ac-3d-overall-fill" style={{ width: `${overall}%` }} />
+      </div>
+      <div className="xr-ac-3d-overall-pct">{overall}% complete</div>
+      <div className="xr-ac-3d-items">
+        {meshyProgress.map((item, i) => (
+          <div key={i} className="xr-ac-3d-item">
+            <div className="xr-ac-3d-item-name">{item.product}</div>
+            <div className="xr-ac-3d-item-row">
+              <div className="xr-ac-3d-item-bar">
+                <div
+                  className="xr-ac-3d-item-fill"
+                  style={{ width: `${item.progress}%` }}
+                />
+              </div>
+              <span className="xr-ac-3d-item-pct">{item.progress}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Visual: Before / After reveal ───────────────────────────────────────────
 
 function BeforeAfterVisual({ report }: { report: XRReport }) {
@@ -251,9 +290,9 @@ function BeforeAfterVisual({ report }: { report: XRReport }) {
 
       <div className="xr-ac-ba-panel">
         <span className="xr-ac-ba-tag xr-ac-ba-tag--after">After XR</span>
-        {topProduct.mockupImageBase64 ? (
+        {topProduct.previewImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={topProduct.mockupImageBase64} alt="3D render" className="xr-ac-ba-img" />
+          <img src={topProduct.previewImageUrl} alt="3D model preview" className="xr-ac-ba-img" />
         ) : (
           <div className="xr-ac-ba-placeholder">3D + AR{"\n"}experience</div>
         )}
@@ -268,17 +307,20 @@ function SlideVisual({
   storeUrl,
   report,
   streamOpportunities,
+  meshyProgress,
 }: {
   slideIdx: number;
   storeUrl: string;
   report: XRReport | null;
   streamOpportunities?: string[] | null;
+  meshyProgress?: Array<{ product: string; progress: number }>;
 }) {
   if (slideIdx === 0) return <ConnectVisual storeUrl={storeUrl} />;
   if (slideIdx === 1) return <GridVisual report={report} />;
   if (slideIdx === 2) return <OppsVisual report={report} streamOpportunities={streamOpportunities} />;
   if (slideIdx === 3) {
     if (report) return <BeforeAfterVisual report={report} />;
+    if (meshyProgress && meshyProgress.length > 0) return <Generating3DVisual meshyProgress={meshyProgress} />;
     return <MetricsVisual report={report} />;
   }
   return null;
@@ -337,6 +379,7 @@ function SlideContent({
   storeUrl,
   report,
   streamOpportunities,
+  meshyProgress,
 }: {
   config: SlideConfig;
   activeStep: number;
@@ -344,13 +387,20 @@ function SlideContent({
   storeUrl: string;
   report: XRReport | null;
   streamOpportunities?: string[] | null;
+  meshyProgress?: Array<{ product: string; progress: number }>;
 }) {
   return (
     <div className="xr-ac-slide-inner">
       <div className="xr-ac-label">{config.label}</div>
       <h3 className="xr-ac-headline">{config.headline}</h3>
       <p className="xr-ac-subhead">{config.subhead}</p>
-      <SlideVisual slideIdx={slideIdx} storeUrl={storeUrl} report={report} streamOpportunities={streamOpportunities} />
+      <SlideVisual
+        slideIdx={slideIdx}
+        storeUrl={storeUrl}
+        report={report}
+        streamOpportunities={streamOpportunities}
+        meshyProgress={meshyProgress}
+      />
       <Timeline steps={config.steps} activeStep={activeStep} />
     </div>
   );
@@ -365,6 +415,7 @@ export function AnalysisProgress({
   storeUrl,
   streamProductCount = null,
   streamOpportunities = null,
+  meshyProgress = [],
 }: {
   reportReady: boolean;
   onComplete: () => void;
@@ -372,6 +423,7 @@ export function AnalysisProgress({
   storeUrl: string;
   streamProductCount?: number | null;
   streamOpportunities?: string[] | null;
+  meshyProgress?: Array<{ product: string; progress: number }>;
 }) {
   const [slideIdx, setSlideIdx] = useState(0);
   const [activeStep, setActiveStep] = useState(SLIDE_1.initStep);
@@ -443,6 +495,7 @@ export function AnalysisProgress({
               storeUrl={storeUrl}
               report={reportPreview}
               streamOpportunities={streamOpportunities}
+              meshyProgress={meshyProgress}
             />
           </div>
         )}
@@ -457,6 +510,7 @@ export function AnalysisProgress({
             storeUrl={storeUrl}
             report={reportPreview}
             streamOpportunities={streamOpportunities}
+            meshyProgress={meshyProgress}
           />
         </div>
       </div>

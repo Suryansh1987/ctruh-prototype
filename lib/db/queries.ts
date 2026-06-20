@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { contacts, emailVerifications, reports, tokenLogs } from "@/lib/db/schema";
+import type { GlbEntry } from "@/lib/db/schema";
 import type { TokenUsageEntry } from "@/lib/types";
 
 export type ReportWithTokens = {
@@ -12,6 +13,7 @@ export type ReportWithTokens = {
   productCount: number | null;
   xrReadinessScore: string | null;
   topOpportunities: string[] | null;
+  glbUrls: GlbEntry[] | null;
   pdfUrl: string | null;
   createdAt: Date | null;
   totalInputTokens: string;
@@ -121,6 +123,7 @@ export async function insertReport(params: {
   productCount: number;
   xrReadinessScore: number;
   topOpportunities: string[];
+  glbUrls?: GlbEntry[];
   pdfUrl?: string;
 }): Promise<string> {
   const db = getDb();
@@ -135,6 +138,7 @@ export async function insertReport(params: {
       productCount: params.productCount,
       xrReadinessScore: params.xrReadinessScore.toFixed(2),
       topOpportunities: params.topOpportunities,
+      glbUrls: params.glbUrls ?? null,
       pdfUrl: params.pdfUrl ?? null,
     })
     .returning({ id: reports.id });
@@ -172,6 +176,7 @@ export async function getAllReportsWithTokens(): Promise<ReportWithTokens[]> {
       productCount: reports.productCount,
       xrReadinessScore: reports.xrReadinessScore,
       topOpportunities: reports.topOpportunities,
+      glbUrls: reports.glbUrls,
       pdfUrl: reports.pdfUrl,
       createdAt: reports.createdAt,
       totalInputTokens: sql<string>`COALESCE(SUM(${tokenLogs.inputTokens}), 0)`,
@@ -202,6 +207,7 @@ export async function getReportsByContact(params: {
       productCount: reports.productCount,
       xrReadinessScore: reports.xrReadinessScore,
       topOpportunities: reports.topOpportunities,
+      glbUrls: reports.glbUrls,
       pdfUrl: reports.pdfUrl,
       createdAt: reports.createdAt,
       totalInputTokens: sql<string>`COALESCE(SUM(${tokenLogs.inputTokens}), 0)`,

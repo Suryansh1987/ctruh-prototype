@@ -52,3 +52,36 @@ export async function uploadPdfToS3(params: {
 
   return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 }
+
+export async function uploadGlbToS3(params: {
+  glbUrl: string;
+  storeName: string;
+  productId: number;
+}): Promise<string> {
+  const bucket = process.env.S3_BUCKET_NAME;
+  const region = process.env.AWS_REGION;
+
+  if (!bucket || !region) {
+    throw new Error("S3_BUCKET_NAME and AWS_REGION must be set in .env");
+  }
+
+  const res = await fetch(params.glbUrl, { signal: AbortSignal.timeout(60_000) });
+  if (!res.ok) throw new Error(`Failed to download GLB from Meshy: ${res.status}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+
+  const date = new Date().toISOString().split("T")[0];
+  const safeName = params.storeName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+  const key = `xr-models/${date}/${safeName}-${params.productId}-${Date.now()}.glb`;
+
+  await getS3().send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: "model/gltf-binary",
+      Metadata: { store: params.storeName },
+    })
+  );
+
+  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+}

@@ -5,6 +5,7 @@ import {
   View,
   Text,
   Image,
+  Link,
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { XRReport, ScoredProduct, Confidence } from "@/lib/types";
@@ -289,8 +290,14 @@ function DimensionBlock({
 
 function BeforeAfterBlock({ product }: { product: ScoredProduct }) {
   const hasOriginal = Boolean(product.imageUrl);
-  const hasMockup = Boolean(product.mockupImageBase64);
-  if (!hasOriginal && !hasMockup) return null;
+  const hasPreview = Boolean(product.previewImageUrl);
+  const hasGlb = Boolean(product.glbUrl);
+  if (!hasOriginal && !hasPreview) return null;
+
+  const appUrl = process.env.PUBLIC_APP_URL?.replace(/\/$/, "") ?? "https://ctruh.com";
+  const viewerUrl = hasGlb
+    ? `${appUrl}/viewer?glb=${encodeURIComponent(product.glbUrl!)}&name=${encodeURIComponent(product.title)}`
+    : null;
 
   return (
     <View style={s.baSection}>
@@ -316,18 +323,27 @@ function BeforeAfterBlock({ product }: { product: ScoredProduct }) {
 
         <View style={s.baSide}>
           <View style={[s.baTag, s.baTagAfter]}><Text style={{ fontSize: 7, color: BLUE }}>AFTER XR</Text></View>
-          {hasMockup ? (
+          {hasPreview ? (
             <View style={s.baImgBox}>
-              <Image style={s.baImg} src={product.mockupImageBase64!} />
+              <Image style={s.baImg} src={product.previewImageUrl!} />
             </View>
           ) : (
             <View style={s.baPlaceholder}>
-              <Text style={s.baPlaceholderText}>3D experience{"\n"}to be built</Text>
+              <Text style={s.baPlaceholderText}>3D model{"\n"}generated</Text>
             </View>
           )}
-          <Text style={s.baCaption}>Interactive 3D + AR experience</Text>
+          <Text style={s.baCaption}>3D model — rotate, zoom, place in AR</Text>
         </View>
       </View>
+
+      {viewerUrl && (
+        <View style={{ marginTop: 10, alignItems: "center" }}>
+          <Link src={viewerUrl} style={{ fontSize: 8, color: BLUE, textDecoration: "underline" }}>
+            Open Interactive 3D Demo →
+          </Link>
+          <Text style={{ fontSize: 7, color: GRAY_600, marginTop: 3 }}>{viewerUrl}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -605,7 +621,7 @@ function ROIPage({ report }: { report: XRReport }) {
     <Page size="A4" style={s.page}>
       <View style={s.sectionHeader}>
         <Text style={s.sectionHeaderText}>What Could XR Mean for Your Revenue?</Text>
-        <Text style={s.sectionHeaderSub}>Page {4 + Math.min(3, report.products.filter(p => p.mockupImageBase64 !== null || report.products.indexOf(p) < 3).length)}</Text>
+        <Text style={s.sectionHeaderSub}>Page {4 + Math.min(3, report.products.length)}</Text>
       </View>
       <View style={s.pageInner}>
         <Text style={s.roiIntro}>

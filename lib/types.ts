@@ -38,7 +38,8 @@ export interface ScoredProduct extends NormalizedProduct {
   xrScores: XRScores;
   assetQuality: AssetQuality;
   overallXRScore: number;
-  mockupImageBase64: string | null;
+  glbUrl: string | null;
+  previewImageUrl: string | null;
 }
 
 export interface ROIScenario {

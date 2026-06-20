@@ -366,7 +366,8 @@ export async function scoreAllProducts(
         xrScores: result.scores,
         assetQuality: result.assetQuality,
         overallXRScore,
-        mockupImageBase64: null,
+        glbUrl: null,
+        previewImageUrl: null,
       });
     });
 

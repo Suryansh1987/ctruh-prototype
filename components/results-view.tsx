@@ -225,6 +225,50 @@ export function ResultsView({
         </div>
       </RevealSection>
 
+      {sortedProducts.some((p) => p.imageUrl || p.previewImageUrl) && (
+        <RevealSection className="mt-12">
+          <div className="xr-section-label">Before XR → After XR</div>
+          {sortedProducts.filter((p) => p.imageUrl || p.previewImageUrl).slice(0, 2).map((product) => (
+            <div key={product.id} className="xr-beforeafter-section" style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 10 }}>{product.title}</div>
+              <div className="xr-ba-grid">
+                <div className="xr-ba-panel">
+                  <span className="xr-ba-tag">Before</span>
+                  {product.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={product.imageUrl} alt="Original" className="xr-ba-img" />
+                  ) : (
+                    <div className="xr-ba-placeholder">No photo</div>
+                  )}
+                  <span className="xr-ba-caption">Flat product photo</span>
+                </div>
+                <div className="xr-ba-arrow">→</div>
+                <div className="xr-ba-panel">
+                  <span className="xr-ba-tag xr-ba-tag--after">After XR</span>
+                  {product.previewImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={product.previewImageUrl} alt="3D render" className="xr-ba-img" />
+                  ) : (
+                    <div className="xr-ba-placeholder">3D model being generated</div>
+                  )}
+                  <span className="xr-ba-caption">Interactive 3D + AR</span>
+                </div>
+              </div>
+              {product.glbUrl && (
+                <a
+                  href={`/viewer?glb=${encodeURIComponent(product.glbUrl)}&name=${encodeURIComponent(product.title)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="xr-ba-viewer-link"
+                >
+                  Open Interactive 3D Demo →
+                </a>
+              )}
+            </div>
+          ))}
+        </RevealSection>
+      )}
+
       <RevealSection className="mt-12">
         <div className="xr-footer-cta">
           <h2>Ready to make this real?</h2>

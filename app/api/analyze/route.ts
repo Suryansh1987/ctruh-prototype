@@ -62,11 +62,13 @@ export async function POST(request: Request) {
         const topOpportunities = computeTopOpportunities(scoredProducts);
         emit({ type: "scored", opportunities: topOpportunities });
 
-        // ── Stage 3: images ────────────────────────────────────────
+        // ── Stage 3: 3D model generation ──────────────────────────
         emit({ type: "phase", phase: "images" });
 
         const { products: productsWithMockups, tokenUsage: imageUsage } =
-          await generateMockupsForTopProducts(scoredProducts);
+          await generateMockupsForTopProducts(scoredProducts, (event) => {
+            emit({ type: "meshy_progress", ...event });
+          });
         allTokenUsage.push(imageUsage);
 
         // ── Stage 4: assemble report ───────────────────────────────
@@ -136,6 +138,16 @@ async function persistReport(
     console.error("[s3] pdf/upload failed:", err);
   }
 
+  const glbUrls = report.products
+    .filter((p) => p.glbUrl)
+    .map((p) => ({
+      productId: p.id,
+      title: p.title,
+      glbUrl: p.glbUrl!,
+      previewImageUrl: p.previewImageUrl,
+      score: p.overallXRScore,
+    }));
+
   const reportId = await insertReport({
     contactId: contact.contactId,
     contactEmail: contact.contactEmail,
@@ -145,6 +157,7 @@ async function persistReport(
     productCount: report.productCount,
     xrReadinessScore: report.xrReadinessScore,
     topOpportunities: report.topOpportunities,
+    glbUrls: glbUrls.length > 0 ? glbUrls : undefined,
     pdfUrl,
   });
 
