@@ -3036,7 +3036,6 @@ a {
 
   /* ── Hide desktop-only panels ── */
   .xr-idle-right,
-  .xr-analyzing-right,
   .xr-divider,
   .xr-loading-side,
   .xr-deco-squares {
@@ -3047,8 +3046,40 @@ a {
   .xr-idle-left {
     width: 100%;
     min-height: 100vh;
-    padding: 20px;
-    padding-bottom: 40px;
+    padding: 24px 20px 40px;
+  }
+
+  /* ── When analyzing: left panel shrinks so cards are reachable ── */
+  .xr-idle-shell.is-analyzing .xr-idle-left {
+    min-height: auto;
+    padding-bottom: 32px;
+  }
+
+  /* ── Analyzing right panel: show below the URL lock on mobile ── */
+  .xr-analyzing-right {
+    display: flex !important;
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+    padding: 0 16px 56px;
+    position: relative;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  /* ── Make inputs touch-friendly (16px prevents iOS auto-zoom) ── */
+  .xr-input {
+    font-size: 16px;
+  }
+
+  .xr-input-wrapper {
+    height: 56px;
+  }
+
+  .xr-primary-button,
+  .xr-secondary-button {
+    min-height: 54px;
   }
 
   .xr-idle-left::after {
@@ -3080,6 +3111,7 @@ a {
 
   .xr-input-anchor {
     width: 100%;
+    margin-top: 20px;
   }
 
   /* ── Input row → stacked ── */
@@ -3091,7 +3123,6 @@ a {
   .xr-primary-button,
   .xr-secondary-button {
     width: 100%;
-    min-height: 48px;
   }
 
   /* ── Chips ── */

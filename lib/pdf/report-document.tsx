@@ -54,6 +54,7 @@ const s = StyleSheet.create({
   scoreSuffix: { fontSize: 20, color: BLUE_LIGHT },
   coverFooter: { borderTopColor: "rgba(255,255,255,0.12)", borderTopWidth: 1, paddingTop: 16 },
   coverFooterText: { fontSize: 9, color: "rgba(255,255,255,0.24)" },
+  coverFooterLink: { fontSize: 9, color: "#6ba3ff", textDecoration: "none" },
 
   // Section pages
   pageInner: { padding: 40 },
@@ -442,6 +443,12 @@ function CoverPage({ report }: { report: XRReport }) {
             Generated {new Date(report.analyzedAt).toLocaleDateString("en-IN", {
               day: "numeric", month: "long", year: "numeric",
             })} · Powered by Ctruh · ctruh.com · Built to help brands discover their XR opportunity
+          </Text>
+          <Text style={[s.coverFooterText, { marginTop: 6 }]}>
+            Made by{" "}
+            <Link src="https://www.linkedin.com/in/suryansh-singh-972754242/" style={s.coverFooterLink}>
+              Suryansh Singh
+            </Link>
           </Text>
         </View>
       </View>

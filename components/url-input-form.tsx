@@ -31,6 +31,7 @@ type OwnedReport = {
 
 const CHIP_GROUPS = [
   ["mvmt.com", "mejuri.com", "gymshark.com"],
+  ["kith.com", "mejuri.com", "gymshark.com"],
 ];
 
 function normalizeLabel(input: string): string {
@@ -392,7 +393,7 @@ export function UrlInputForm({
   return (
     <div className="xr-input-shell">
       {appState !== "report" && (
-        <div className={`xr-idle-shell${transitionPhase === "exiting" ? " is-exiting" : ""}`}>
+        <div className={`xr-idle-shell${transitionPhase === "exiting" ? " is-exiting" : ""}${appState === "analyzing" ? " is-analyzing" : ""}`}>
           <section className="xr-idle-left">
             <img
               src="https://www.ctruh.com/assets/images/ctruh-logo.png"
