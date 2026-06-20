@@ -261,10 +261,6 @@ function formatCurrency(n: number): string {
   return `$${n.toLocaleString()}`;
 }
 
-function clampText(value: string, maxLength: number): string {
-  if (value.length <= maxLength) return value;
-  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
-}
 
 function getGeneratedProducts(report: XRReport, limit = 2): ScoredProduct[] {
   return [...report.products]
@@ -322,17 +318,17 @@ function DimensionBlock({
       <View style={s.progressBar}>
         <View style={[s.progressFill, { width: fillPct as string, backgroundColor: color }]} />
       </View>
-      <Text style={s.dimensionReason}>{clampText(reason, 90)}</Text>
+      <Text style={s.dimensionReason}>{reason}</Text>
       {missingOut ? (
         <View style={{ flexDirection: "row", marginTop: 3, gap: 3 }}>
           <Text style={{ fontSize: 6, color: RED, fontFamily: "Helvetica-Bold", flexShrink: 0 }}>↓ </Text>
-          <Text style={{ fontSize: 6, color: GRAY_600, flex: 1 }}>{clampText(missingOut, 85)}</Text>
+          <Text style={{ fontSize: 6, color: GRAY_600, flex: 1 }}>{missingOut}</Text>
         </View>
       ) : null}
       {tip ? (
         <View style={{ flexDirection: "row", marginTop: 2, gap: 3 }}>
           <Text style={{ fontSize: 6, color: GREEN, fontFamily: "Helvetica-Bold", flexShrink: 0 }}>→ </Text>
-          <Text style={{ fontSize: 6, color: GRAY_600, flex: 1 }}>{clampText(tip, 85)}</Text>
+          <Text style={{ fontSize: 6, color: GRAY_600, flex: 1 }}>{tip}</Text>
         </View>
       ) : null}
     </View>
@@ -511,7 +507,7 @@ function OverviewPage({ report }: { report: XRReport }) {
         {report.topOpportunities.map((opp, i) => (
           <View key={i} style={s.oppItem}>
             <View style={s.oppDot} />
-            <Text style={s.oppText}>{clampText(opp, 92)}</Text>
+            <Text style={s.oppText}>{opp}</Text>
           </View>
         ))}
 
@@ -521,7 +517,7 @@ function OverviewPage({ report }: { report: XRReport }) {
             {report.storeInsights.slice(0, 2).map((insight, i) => (
               <View key={i} style={[s.oppItem, { backgroundColor: BLUE_LIGHT, paddingVertical: 7 }]}>
                 <View style={[s.oppDot, { backgroundColor: BLUE }]} />
-                <Text style={s.oppText}>{clampText(insight, 88)}</Text>
+                <Text style={s.oppText}>{insight}</Text>
               </View>
             ))}
           </View>
@@ -533,7 +529,7 @@ function OverviewPage({ report }: { report: XRReport }) {
             {report.quickWins.slice(0, 2).map((win, i) => (
               <View key={i} style={[s.oppItem, { backgroundColor: "#e8fff7", borderRadius: 6, paddingVertical: 7 }]}>
                 <View style={[s.oppDot, { backgroundColor: GREEN }]} />
-                <Text style={[s.oppText, { color: "#005738" }]}>{clampText(win, 88)}</Text>
+                <Text style={[s.oppText, { color: "#005738" }]}>{win}</Text>
               </View>
             ))}
           </View>
@@ -629,7 +625,7 @@ function ProductDetailPage({
         <Text style={s.productMeta}>
           {product.category} · ${product.price} · {product.variantCount} variant{product.variantCount !== 1 ? "s" : ""} · XR Score: {product.overallXRScore}/10
         </Text>
-        <Text style={s.productReason}>{clampText(getBusinessReason(product), 170)}</Text>
+        <Text style={s.productReason}>{getBusinessReason(product)}</Text>
 
         <BeforeAfterBlock product={product} />
 
@@ -701,7 +697,7 @@ function ProductDetailPage({
             <View style={s.assetRecs}>
               <Text style={[s.assetLabel, { marginBottom: 4 }]}>RECOMMENDATIONS</Text>
               {product.assetQuality.recommendations.slice(0, 2).map((r, i) => (
-                <Text key={i} style={s.assetRec}>· {clampText(r, 80)}</Text>
+                <Text key={i} style={s.assetRec}>· {r}</Text>
               ))}
             </View>
           )}
