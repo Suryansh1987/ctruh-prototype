@@ -13,9 +13,15 @@ declare module "react" {
         "auto-rotate"?: boolean | string;
         ar?: boolean | string;
         "ar-modes"?: string;
+        "ar-scale"?: string;
+        "ar-placement"?: string;
+        "xr-environment"?: boolean | string;
         "shadow-intensity"?: string;
+        "shadow-softness"?: string;
         exposure?: string;
+        "environment-image"?: string;
         style?: React.CSSProperties;
+        onArStatus?: (e: Event) => void;
       };
     }
   }
