@@ -122,10 +122,10 @@ export function ViewerClient({
               onClick={handleARClick}
               style={{
                 display: "flex", alignItems: "center", gap: 10,
-                background: "linear-gradient(135deg, #4f6ef7 0%, #7c3aed 100%)",
+                background: "#0057ff",
                 border: "none", borderRadius: 16, cursor: "pointer",
                 padding: "14px 32px",
-                boxShadow: "0 0 32px rgba(79,110,247,0.4), 0 4px 16px rgba(0,0,0,0.4)",
+                boxShadow: "0 0 32px rgba(0,87,255,0.35), 0 4px 16px rgba(0,0,0,0.4)",
               }}
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
