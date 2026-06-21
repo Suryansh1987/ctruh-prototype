@@ -108,13 +108,15 @@ export function ViewerClient({
           </div>
         )}
 
-        {/* Bottom action area */}
+        {/* Bottom action area — solid panel, clearly separated from model */}
         {!arActive && (
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0,
-            padding: "20px 20px 36px",
-            background: "linear-gradient(to top, rgba(6,13,34,0.95) 0%, transparent 100%)",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(6,13,34,0.97)",
+            backdropFilter: "blur(12px)",
+            padding: "20px 20px 40px",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
           }}>
 
             {/* AR button */}
@@ -124,11 +126,13 @@ export function ViewerClient({
                 display: "flex", alignItems: "center", gap: 10,
                 background: "#0057ff",
                 border: "none", borderRadius: 16, cursor: "pointer",
-                padding: "14px 32px",
-                boxShadow: "0 0 32px rgba(0,87,255,0.35), 0 4px 16px rgba(0,0,0,0.4)",
+                padding: "16px 40px",
+                width: "100%", maxWidth: 320,
+                justifyContent: "center",
+                boxShadow: "0 0 24px rgba(0,87,255,0.3), 0 4px 12px rgba(0,0,0,0.5)",
               }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round" />
                 <path d="M2 17l10 5 10-5" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round" />
                 <path d="M2 12l10 5 10-5" stroke="#fff" strokeWidth="1.8" strokeLinejoin="round" />
@@ -138,10 +142,14 @@ export function ViewerClient({
               </span>
             </button>
 
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textAlign: "center" }}>
+              Available on Android only · iOS support coming soon
+            </span>
+
             {/* Not supported hint */}
             {arAvailable === false && (
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", textAlign: "center" }}>
-                AR not supported on this device · Open on your phone for the full experience
+              <span style={{ fontSize: 11, color: "rgba(255,100,100,0.7)", textAlign: "center" }}>
+                AR not supported on this browser · Try Chrome on Android
               </span>
             )}
 
