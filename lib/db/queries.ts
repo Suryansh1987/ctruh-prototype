@@ -2,7 +2,7 @@ import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
 import { contacts, emailVerifications, reports, tokenLogs } from "@/lib/db/schema";
 import type { GlbEntry } from "@/lib/db/schema";
-import type { TokenUsageEntry } from "@/lib/types";
+import type { TokenUsageEntry, XRReport } from "@/lib/types";
 
 export type ReportWithTokens = {
   id: string;
@@ -15,6 +15,8 @@ export type ReportWithTokens = {
   topOpportunities: string[] | null;
   glbUrls: GlbEntry[] | null;
   pdfUrl: string | null;
+  reportData: XRReport | null;
+  status: string | null;
   createdAt: Date | null;
   totalInputTokens: string;
   totalOutputTokens: string;
@@ -125,6 +127,8 @@ export async function insertReport(params: {
   topOpportunities: string[];
   glbUrls?: GlbEntry[];
   pdfUrl?: string;
+  reportData?: XRReport;
+  status?: string;
 }): Promise<string> {
   const db = getDb();
   const [row] = await db
@@ -140,9 +144,63 @@ export async function insertReport(params: {
       topOpportunities: params.topOpportunities,
       glbUrls: params.glbUrls ?? null,
       pdfUrl: params.pdfUrl ?? null,
+      reportData: params.reportData ?? null,
+      status: params.status ?? "ready",
     })
     .returning({ id: reports.id });
   return row.id;
+}
+
+export async function updateReport(
+  id: string,
+  patch: {
+    glbUrls?: GlbEntry[];
+    pdfUrl?: string;
+    reportData?: XRReport;
+    status?: string;
+  }
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(reports)
+    .set({
+      ...(patch.glbUrls !== undefined ? { glbUrls: patch.glbUrls } : {}),
+      ...(patch.pdfUrl !== undefined ? { pdfUrl: patch.pdfUrl } : {}),
+      ...(patch.reportData !== undefined ? { reportData: patch.reportData } : {}),
+      ...(patch.status !== undefined ? { status: patch.status } : {}),
+    })
+    .where(eq(reports.id, id));
+}
+
+export async function getReportById(id: string): Promise<ReportWithTokens | null> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: reports.id,
+      contactEmail: reports.contactEmail,
+      contactPhone: reports.contactPhone,
+      storeUrl: reports.storeUrl,
+      storeName: reports.storeName,
+      productCount: reports.productCount,
+      xrReadinessScore: reports.xrReadinessScore,
+      topOpportunities: reports.topOpportunities,
+      glbUrls: reports.glbUrls,
+      pdfUrl: reports.pdfUrl,
+      reportData: reports.reportData,
+      status: reports.status,
+      createdAt: reports.createdAt,
+      totalInputTokens: sql<string>`COALESCE(SUM(${tokenLogs.inputTokens}), 0)`,
+      totalOutputTokens: sql<string>`COALESCE(SUM(${tokenLogs.outputTokens}), 0)`,
+      totalCostUsd: sql<string>`COALESCE(SUM(${tokenLogs.costUsd}), 0)`,
+      operationCount: sql<string>`COUNT(${tokenLogs.id})`,
+    })
+    .from(reports)
+    .leftJoin(tokenLogs, eq(tokenLogs.reportId, reports.id))
+    .where(eq(reports.id, id))
+    .groupBy(reports.id)
+    .limit(1);
+
+  return (rows[0] as ReportWithTokens) ?? null;
 }
 
 export async function insertTokenLogs(
@@ -178,6 +236,8 @@ export async function getAllReportsWithTokens(): Promise<ReportWithTokens[]> {
       topOpportunities: reports.topOpportunities,
       glbUrls: reports.glbUrls,
       pdfUrl: reports.pdfUrl,
+      reportData: reports.reportData,
+      status: reports.status,
       createdAt: reports.createdAt,
       totalInputTokens: sql<string>`COALESCE(SUM(${tokenLogs.inputTokens}), 0)`,
       totalOutputTokens: sql<string>`COALESCE(SUM(${tokenLogs.outputTokens}), 0)`,
@@ -209,6 +269,8 @@ export async function getReportsByContact(params: {
       topOpportunities: reports.topOpportunities,
       glbUrls: reports.glbUrls,
       pdfUrl: reports.pdfUrl,
+      reportData: reports.reportData,
+      status: reports.status,
       createdAt: reports.createdAt,
       totalInputTokens: sql<string>`COALESCE(SUM(${tokenLogs.inputTokens}), 0)`,
       totalOutputTokens: sql<string>`COALESCE(SUM(${tokenLogs.outputTokens}), 0)`,

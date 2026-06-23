@@ -81,8 +81,8 @@ function ReportCard({ report }: { report: ReportRow }) {
             Download PDF
           </a>
         )}
-        <Link href="/" className="rp-action-link rp-action-link--primary">
-          New Analysis →
+        <Link href={`/report/${report.id}`} className="rp-action-link rp-action-link--primary">
+          View Report →
         </Link>
       </div>
     </div>
@@ -131,7 +131,7 @@ export function ReportsClient() {
       const verifyData = await verifyRes.json() as { ok?: boolean; error?: string };
       if (!verifyRes.ok || !verifyData.ok) throw new Error(verifyData.error ?? "Invalid code.");
 
-      const reportsRes = await fetch("/api/my-reports", {
+      const reportsRes = await fetch("/api/contact/reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, phone }),

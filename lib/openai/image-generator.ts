@@ -13,7 +13,8 @@ async function generate3DModel(
   product: ScoredProduct,
   taskIndex: number,
   total: number,
-  onProgress?: (event: MeshyProgressEvent) => void
+  onProgress?: (event: MeshyProgressEvent) => void,
+  webhookUrl?: string
 ): Promise<{ glbUrl: string | null; previewImageUrl: string | null }> {
   if (!product.imageUrl) {
     console.log(`[meshy] skipping "${product.title}" — no imageUrl`);
@@ -22,7 +23,7 @@ async function generate3DModel(
 
   try {
     console.log(`[meshy] starting image-to-3D for "${product.title}"`);
-    const taskId = await createImageTo3DTask(product.imageUrl);
+    const taskId = await createImageTo3DTask(product.imageUrl, webhookUrl);
 
     const result = await waitForTaskCompletion(
       taskId,
@@ -46,7 +47,8 @@ async function generate3DModel(
 
 export async function generateMockupsForTopProducts(
   products: ScoredProduct[],
-  onProgress?: (event: MeshyProgressEvent) => void
+  onProgress?: (event: MeshyProgressEvent) => void,
+  makeWebhookUrl?: (productId: number) => string
 ): Promise<{ products: ScoredProduct[]; tokenUsage: TokenUsageEntry }> {
   const sorted = [...products].sort((a, b) => b.overallXRScore - a.overallXRScore);
   const top2 = sorted.slice(0, 2);
@@ -54,7 +56,7 @@ export async function generateMockupsForTopProducts(
   console.log(`[meshy] generating for: ${top2.map((p) => p.title).join(" | ")}`);
 
   const results = await Promise.all(
-    top2.map((p, i) => generate3DModel(p, i, top2.length, onProgress))
+    top2.map((p, i) => generate3DModel(p, i, top2.length, onProgress, makeWebhookUrl?.(p.id)))
   );
 
   const successCount = results.filter((r) => r.glbUrl).length;

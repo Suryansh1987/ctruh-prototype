@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, integer, decimal, jsonb, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import type { XRReport } from "@/lib/types";
 
 export const contacts = pgTable(
   "contacts",
@@ -44,6 +45,8 @@ export const reports = pgTable("reports", {
   topOpportunities: jsonb("top_opportunities").$type<string[]>(),
   glbUrls: jsonb("glb_urls").$type<GlbEntry[]>(),
   pdfUrl: text("pdf_url"),
+  reportData: jsonb("report_data").$type<XRReport>(),
+  status: text("status").default("ready"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 

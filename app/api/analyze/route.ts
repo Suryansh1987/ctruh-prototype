@@ -1,16 +1,24 @@
+import { after } from "next/server";
 import { scrapeShopifyProducts } from "@/lib/shopify/scraper";
 import { scoreAllProducts } from "@/lib/openai/scorer";
 import { generateMockupsForTopProducts } from "@/lib/openai/image-generator";
 import { computeXRReadinessScore, computeTopOpportunities, computeROIScenarios, computeStoreInsights, computeQuickWins } from "@/lib/scoring/xr-readiness";
 import { uploadPdfToS3 } from "@/lib/s3/upload";
 import { generateReportPDF } from "@/lib/pdf/generate";
-import { getVerifiedContact, insertReport, insertTokenLogs } from "@/lib/db/queries";
+import { getVerifiedContact, insertReport, insertTokenLogs, updateReport } from "@/lib/db/queries";
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from "@/lib/contact";
-import type { XRReport, TokenUsageEntry } from "@/lib/types";
+import { sendReportReadyEmail } from "@/lib/resend";
+import type { XRReport, TokenUsageEntry, ScoredProduct } from "@/lib/types";
+import type { GlbEntry } from "@/lib/db/schema";
 
 export const maxDuration = 300;
 
-// NDJSON streaming — each line is a JSON event
+function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
 export async function POST(request: Request) {
   const body = await request.json() as { url?: string; email?: string; phone?: string };
   const rawUrl = body?.url;
@@ -41,7 +49,6 @@ export async function POST(request: Request) {
       try {
         // ── Stage 1: scraping ──────────────────────────────────────
         emit({ type: "phase", phase: "scraping" });
-
         const { storeName, products } = await scrapeShopifyProducts(rawUrl);
 
         if (products.length === 0) {
@@ -49,12 +56,10 @@ export async function POST(request: Request) {
           controller.close();
           return;
         }
-
         emit({ type: "scraped", storeName, count: products.length });
 
         // ── Stage 2: scoring ───────────────────────────────────────
         emit({ type: "phase", phase: "scoring" });
-
         const allTokenUsage: TokenUsageEntry[] = [];
         const { scoredProducts, tokenUsage: scoringUsage } = await scoreAllProducts(products);
         allTokenUsage.push(...scoringUsage);
@@ -62,24 +67,15 @@ export async function POST(request: Request) {
         const topOpportunities = computeTopOpportunities(scoredProducts);
         emit({ type: "scored", opportunities: topOpportunities });
 
-        // ── Stage 3: 3D model generation ──────────────────────────
-        emit({ type: "phase", phase: "images" });
-
-        const { products: productsWithMockups, tokenUsage: imageUsage } =
-          await generateMockupsForTopProducts(scoredProducts, (event) => {
-            emit({ type: "meshy_progress", ...event });
-          });
-        allTokenUsage.push(imageUsage);
-
-        // ── Stage 4: assemble report ───────────────────────────────
-        const xrReadinessScore = computeXRReadinessScore(productsWithMockups);
+        // ── Stage 3: assemble base report & persist to DB ──────────
+        const xrReadinessScore = computeXRReadinessScore(scoredProducts);
         const avgProductPrice = products.reduce((s, p) => s + p.price, 0) / products.length;
         const roiScenarios = computeROIScenarios(avgProductPrice);
-        const categories = Array.from(new Set(productsWithMockups.map((p) => p.category)));
-        const storeInsights = computeStoreInsights(productsWithMockups);
-        const quickWins = computeQuickWins(productsWithMockups);
+        const categories = Array.from(new Set(scoredProducts.map((p) => p.category)));
+        const storeInsights = computeStoreInsights(scoredProducts);
+        const quickWins = computeQuickWins(scoredProducts);
 
-        const report: XRReport = {
+        const baseReport: XRReport = {
           storeName,
           storeUrl: rawUrl,
           analyzedAt: new Date().toISOString(),
@@ -89,21 +85,84 @@ export async function POST(request: Request) {
           topOpportunities,
           storeInsights,
           quickWins,
-          products: productsWithMockups,
+          products: scoredProducts,
           roiScenarios,
           avgProductPrice,
         };
 
-        emit({ type: "report", data: report });
-        controller.close();
-
-        // PDF + S3 + DB in background
-        persistReport(report, allTokenUsage, {
+        // Insert with status 'processing' so report page exists immediately
+        const reportId = await insertReport({
           contactId: verifiedContact.id,
           contactEmail: verifiedContact.email,
           contactPhone: verifiedContact.phone,
-        }).catch((err) =>
-          console.error("[persist] failed:", err)
+          storeUrl: rawUrl,
+          storeName,
+          productCount: products.length,
+          xrReadinessScore,
+          topOpportunities,
+          reportData: baseReport,
+          status: "processing",
+        });
+        await insertTokenLogs(reportId, allTokenUsage);
+
+        emit({ type: "reportId", id: reportId });
+
+        // ── Stage 4: 3D model generation (150s budget) ────────────
+        emit({ type: "phase", phase: "images" });
+
+        const webhookSecret = process.env.MESHY_WEBHOOK_SECRET ?? "";
+        const baseUrl = getBaseUrl();
+
+        let productsWithMockups: ScoredProduct[] = scoredProducts;
+        let meshyTimedOut = false;
+
+        try {
+          const { products: withMockups, tokenUsage: imageUsage } =
+            await generateMockupsForTopProducts(
+              scoredProducts,
+              (event) => emit({ type: "meshy_progress", ...event }),
+              (productId) =>
+                `${baseUrl}/api/webhooks/meshy?reportId=${reportId}&productId=${productId}&secret=${webhookSecret}`
+            );
+          productsWithMockups = withMockups;
+          allTokenUsage.push(imageUsage);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("timed out")) {
+            meshyTimedOut = true;
+            console.log(`[meshy] timed out for report ${reportId} — webhook will complete later`);
+          } else {
+            console.error("[meshy] failed:", err);
+          }
+        }
+
+        // Build final report with whatever GLBs we have
+        const glbEntries: GlbEntry[] = productsWithMockups
+          .filter((p) => p.glbUrl)
+          .map((p) => ({
+            productId: p.id,
+            title: p.title,
+            glbUrl: p.glbUrl!,
+            previewImageUrl: p.previewImageUrl,
+            score: p.overallXRScore,
+          }));
+
+        const finalReport: XRReport = { ...baseReport, products: productsWithMockups };
+
+        // Update DB: if not timed out → ready now; if timed out → webhook will set ready
+        await updateReport(reportId, {
+          reportData: finalReport,
+          ...(glbEntries.length > 0 ? { glbUrls: glbEntries } : {}),
+          ...(!meshyTimedOut ? { status: "ready" } : {}),
+        });
+
+        emit({ type: "redirect", url: `/report/${reportId}` });
+        controller.close();
+
+        // PDF + S3 + email run after response is closed
+        after(
+          finalizePersist(reportId, finalReport, verifiedContact.email, meshyTimedOut)
+            .catch((err) => console.error("[persist] failed:", err))
         );
       } catch (err) {
         console.error("[analyze] pipeline error:", err);
@@ -127,46 +186,29 @@ export async function POST(request: Request) {
   });
 }
 
-async function persistReport(
+async function finalizePersist(
+  reportId: string,
   report: XRReport,
-  tokenUsage: TokenUsageEntry[],
-  contact: { contactId: string; contactEmail: string; contactPhone: string }
+  contactEmail: string,
+  meshyTimedOut: boolean
 ) {
-  // Generate PDF + upload to S3
+  // Generate PDF with whatever GLBs we have (even partial)
   let pdfUrl: string | undefined;
   try {
     const pdfBuffer = await generateReportPDF(report);
     pdfUrl = await uploadPdfToS3({ buffer: pdfBuffer, storeName: report.storeName });
     console.log(`[s3] uploaded: ${pdfUrl}`);
+    await updateReport(reportId, { pdfUrl });
   } catch (err) {
     console.error("[s3] pdf/upload failed:", err);
   }
 
-  const glbUrls = report.products
-    .filter((p) => p.glbUrl)
-    .map((p) => ({
-      productId: p.id,
-      title: p.title,
-      glbUrl: p.glbUrl!,
-      previewImageUrl: p.previewImageUrl,
-      score: p.overallXRScore,
-    }));
-
-  const reportId = await insertReport({
-    contactId: contact.contactId,
-    contactEmail: contact.contactEmail,
-    contactPhone: contact.contactPhone,
-    storeUrl: report.storeUrl,
-    storeName: report.storeName,
-    productCount: report.productCount,
-    xrReadinessScore: report.xrReadinessScore,
-    topOpportunities: report.topOpportunities,
-    glbUrls: glbUrls.length > 0 ? glbUrls : undefined,
-    pdfUrl,
-  });
-
-  await insertTokenLogs(reportId, tokenUsage);
-
-  const totalCost = tokenUsage.reduce((sum, e) => sum + e.costUsd, 0);
-  console.log(`[db] report ${reportId} saved — $${totalCost.toFixed(4)} total cost`);
+  // Only send "ready" email if Meshy finished in-stream (webhook sends its own email)
+  if (!meshyTimedOut) {
+    try {
+      await sendReportReadyEmail({ to: contactEmail, storeName: report.storeName, reportId });
+    } catch (err) {
+      console.error("[email] failed:", err);
+    }
+  }
 }

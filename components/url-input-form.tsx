@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnalysisProgress } from "./analysis-progress";
 import { ResultsView } from "./results-view";
 import { RightPanelCarousel } from "./right-panel-carousel";
@@ -78,7 +79,9 @@ export function UrlInputForm({
   const [streamProductCount, setStreamProductCount] = useState<number | null>(null);
   const [streamOpportunities, setStreamOpportunities] = useState<string[] | null>(null);
   const [meshyProgress, setMeshyProgress] = useState<Array<{ product: string; progress: number }>>([]);
+  const [reportId, setReportId] = useState<string | null>(null);
   const [chipGroupIndex, setChipGroupIndex] = useState(0);
+  const router = useRouter();
   const [chipsFading, setChipsFading] = useState(false);
   const [clickedChip, setClickedChip] = useState<string | null>(null);
   const reportStageRef = useRef<HTMLDivElement | null>(null);
@@ -196,6 +199,8 @@ export function UrlInputForm({
             product?: string;
             taskIndex?: number;
             progress?: number;
+            id?: string;
+            url?: string;
           };
 
           if (event.type === "scraped" && event.count != null) {
@@ -208,7 +213,12 @@ export function UrlInputForm({
               next[event.taskIndex!] = { product: event.product!, progress: event.progress ?? 0 };
               return next;
             });
+          } else if (event.type === "reportId" && event.id) {
+            setReportId(event.id);
+          } else if (event.type === "redirect" && event.url) {
+            router.push(event.url);
           } else if (event.type === "report" && event.data) {
+            // Legacy fallback — normally we redirect
             setPendingReport(event.data);
           } else if (event.type === "error") {
             throw new Error(event.message ?? "Analysis failed");
@@ -370,6 +380,7 @@ export function UrlInputForm({
     setProgressDone(false);
     setStreamProductCount(null);
     setStreamOpportunities(null);
+    setReportId(null);
     setTransitionPhase(null);
     setAppState("idle");
   }

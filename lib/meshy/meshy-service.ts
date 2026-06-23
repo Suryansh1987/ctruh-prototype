@@ -19,11 +19,14 @@ export interface MeshyResult {
   previewImageUrl: string | null;
 }
 
-export async function createImageTo3DTask(imageUrl: string): Promise<string> {
+export async function createImageTo3DTask(imageUrl: string, webhookUrl?: string): Promise<string> {
+  const body: Record<string, unknown> = { image_url: imageUrl, enable_pbr: true };
+  if (webhookUrl) body.webhook_url = webhookUrl;
+
   const res = await fetch(`${MESHY_BASE}/image-to-3d`, {
     method: "POST",
     headers: headers(),
-    body: JSON.stringify({ image_url: imageUrl, enable_pbr: true }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -55,7 +58,7 @@ async function getTaskStatus(taskId: string): Promise<{
 export async function waitForTaskCompletion(
   taskId: string,
   onProgress?: (progress: number) => void,
-  timeoutMs = 240_000
+  timeoutMs = 150_000
 ): Promise<MeshyResult> {
   const deadline = Date.now() + timeoutMs;
 
