@@ -1,4 +1,4 @@
-import { getReportById, updateReport } from "@/lib/db/queries";
+import { getMeshyTaskByTaskId, getReportById, markMeshyTaskCompleted, updateReport } from "@/lib/db/queries";
 import { uploadGlbToS3 } from "@/lib/s3/upload";
 import { sendReportReadyEmail } from "@/lib/resend";
 import { isValidMeshyWebhookSignature, matchesLegacyMeshySecret } from "@/lib/meshy/webhook-auth";
@@ -7,21 +7,10 @@ import type { GlbEntry } from "@/lib/db/schema";
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const reportId = searchParams.get("reportId");
-    const productId = searchParams.get("productId");
+    const requestedReportId = searchParams.get("reportId");
+    const requestedProductId = searchParams.get("productId");
     const secret = searchParams.get("secret");
     const signature = searchParams.get("sig");
-
-    if (!reportId || !productId) {
-      return new Response(null, { status: 400 });
-    }
-
-    const isSignedRequest = isValidMeshyWebhookSignature(reportId, productId, signature);
-    const isLegacyRequest = matchesLegacyMeshySecret(secret);
-
-    if (!isSignedRequest && !isLegacyRequest) {
-      return new Response(null, { status: 401 });
-    }
 
     const task = await request.json() as {
       id?: string;
@@ -30,6 +19,32 @@ export async function POST(request: Request) {
       thumbnail_url?: string;
       progress?: number;
     };
+
+    const mappedTask = task.id ? await getMeshyTaskByTaskId(task.id) : null;
+    const reportId = requestedReportId ?? mappedTask?.reportId ?? null;
+    const productId = requestedProductId ?? mappedTask?.productId ?? null;
+
+    if (!reportId || !productId) {
+      console.warn("[webhook] ignored Meshy event with no report/product mapping", {
+        taskId: task.id ?? null,
+        url: request.url,
+      });
+      return new Response(null, { status: 204 });
+    }
+
+    const isSignedRequest = isValidMeshyWebhookSignature(reportId, productId, signature);
+    const isLegacyRequest = matchesLegacyMeshySecret(secret);
+
+    if ((signature || secret) && !isSignedRequest && !isLegacyRequest) {
+      return new Response(null, { status: 401 });
+    }
+
+    if (!signature && !secret && !mappedTask) {
+      console.warn("[webhook] ignored unsigned Meshy event for unknown task", {
+        taskId: task.id ?? null,
+      });
+      return new Response(null, { status: 204 });
+    }
 
     if (task.status !== "SUCCEEDED" || !task.model_urls?.glb) {
       // Not a completion event we care about
@@ -78,6 +93,9 @@ export async function POST(request: Request) {
       glbUrls: updatedGlbUrls,
       status: "ready",
     });
+    if (task.id) {
+      await markMeshyTaskCompleted(task.id);
+    }
 
     console.log(`[webhook] report ${reportId} — GLB for "${productTitle}" stored`);
 

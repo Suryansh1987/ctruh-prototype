@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db/client";
-import { contacts, emailVerifications, reports, tokenLogs } from "@/lib/db/schema";
+import { contacts, emailVerifications, meshyTasks, reports, tokenLogs } from "@/lib/db/schema";
 import type { GlbEntry } from "@/lib/db/schema";
 import type { TokenUsageEntry, XRReport } from "@/lib/types";
 
@@ -220,6 +220,38 @@ export async function insertTokenLogs(
       costUsd: e.costUsd.toFixed(6),
     }))
   );
+}
+
+export async function insertMeshyTask(params: {
+  taskId: string;
+  reportId: string;
+  productId: number | string;
+}): Promise<void> {
+  const db = getDb();
+  await db.insert(meshyTasks).values({
+    taskId: params.taskId,
+    reportId: params.reportId,
+    productId: String(params.productId),
+  }).onConflictDoNothing();
+}
+
+export async function getMeshyTaskByTaskId(taskId: string) {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(meshyTasks)
+    .where(eq(meshyTasks.taskId, taskId))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export async function markMeshyTaskCompleted(taskId: string): Promise<void> {
+  const db = getDb();
+  await db
+    .update(meshyTasks)
+    .set({ completedAt: new Date() })
+    .where(eq(meshyTasks.taskId, taskId));
 }
 
 export async function getAllReportsWithTokens(): Promise<ReportWithTokens[]> {

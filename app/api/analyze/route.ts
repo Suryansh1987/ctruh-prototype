@@ -5,9 +5,8 @@ import { generateMockupsForTopProducts } from "@/lib/openai/image-generator";
 import { computeXRReadinessScore, computeTopOpportunities, computeROIScenarios, computeStoreInsights, computeQuickWins } from "@/lib/scoring/xr-readiness";
 import { uploadPdfToS3 } from "@/lib/s3/upload";
 import { generateReportPDF } from "@/lib/pdf/generate";
-import { getVerifiedContact, insertReport, insertTokenLogs, updateReport } from "@/lib/db/queries";
+import { getVerifiedContact, insertMeshyTask, insertReport, insertTokenLogs, updateReport } from "@/lib/db/queries";
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from "@/lib/contact";
-import { signMeshyWebhook } from "@/lib/meshy/webhook-auth";
 import { sendReportReadyEmail } from "@/lib/resend";
 import type { XRReport, TokenUsageEntry, ScoredProduct } from "@/lib/types";
 import type { GlbEntry } from "@/lib/db/schema";
@@ -121,8 +120,9 @@ export async function POST(request: Request) {
             await generateMockupsForTopProducts(
               scoredProducts,
               (event) => emit({ type: "meshy_progress", ...event }),
-              (productId) =>
-                `${baseUrl}/api/webhooks/meshy?reportId=${reportId}&productId=${productId}&sig=${signMeshyWebhook(reportId, productId)}`
+              () =>
+                `${baseUrl}/api/webhooks/meshy?secret=${encodeURIComponent(process.env.MESHY_WEBHOOK_SECRET ?? "")}`,
+              (taskId, productId) => insertMeshyTask({ taskId, reportId, productId })
             );
           productsWithMockups = withMockups;
           allTokenUsage.push(imageUsage);

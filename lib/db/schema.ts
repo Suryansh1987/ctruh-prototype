@@ -62,6 +62,14 @@ export const tokenLogs = pgTable("token_logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
+export const meshyTasks = pgTable("meshy_tasks", {
+  taskId: text("task_id").primaryKey(),
+  reportId: uuid("report_id").references(() => reports.id, { onDelete: "cascade" }).notNull(),
+  productId: text("product_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
 export type TokenLog = typeof tokenLogs.$inferSelect;
@@ -70,3 +78,5 @@ export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type NewEmailVerification = typeof emailVerifications.$inferInsert;
+export type MeshyTask = typeof meshyTasks.$inferSelect;
+export type NewMeshyTask = typeof meshyTasks.$inferInsert;
