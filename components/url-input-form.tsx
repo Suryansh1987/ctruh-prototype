@@ -58,7 +58,7 @@ export function UrlInputForm({
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [verifiedIdentity, setVerifiedIdentity] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    return window.sessionStorage.getItem("ctruh_verified_identity");
+    return window.localStorage.getItem("ctruh_verified_identity");
   });
   const [pendingAnalyzeUrl, setPendingAnalyzeUrl] = useState<string | null>(null);
 
@@ -292,7 +292,7 @@ export function UrlInputForm({
 
       const identity = contactIdentity(normalizedEmail, normalizedPhone);
       setVerifiedIdentity(identity);
-      window.sessionStorage.setItem("ctruh_verified_identity", identity);
+      window.localStorage.setItem("ctruh_verified_identity", identity);
       setVerificationCode("");
       setVerificationSent(false);
 

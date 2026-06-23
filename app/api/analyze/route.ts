@@ -7,6 +7,7 @@ import { uploadPdfToS3 } from "@/lib/s3/upload";
 import { generateReportPDF } from "@/lib/pdf/generate";
 import { getVerifiedContact, insertReport, insertTokenLogs, updateReport } from "@/lib/db/queries";
 import { isValidEmail, isValidPhone, normalizeEmail, normalizePhone } from "@/lib/contact";
+import { signMeshyWebhook } from "@/lib/meshy/webhook-auth";
 import { sendReportReadyEmail } from "@/lib/resend";
 import type { XRReport, TokenUsageEntry, ScoredProduct } from "@/lib/types";
 import type { GlbEntry } from "@/lib/db/schema";
@@ -110,7 +111,6 @@ export async function POST(request: Request) {
         // ── Stage 4: 3D model generation (150s budget) ────────────
         emit({ type: "phase", phase: "images" });
 
-        const webhookSecret = process.env.MESHY_WEBHOOK_SECRET ?? "";
         const baseUrl = getBaseUrl();
 
         let productsWithMockups: ScoredProduct[] = scoredProducts;
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
               scoredProducts,
               (event) => emit({ type: "meshy_progress", ...event }),
               (productId) =>
-                `${baseUrl}/api/webhooks/meshy?reportId=${reportId}&productId=${productId}&secret=${webhookSecret}`
+                `${baseUrl}/api/webhooks/meshy?reportId=${reportId}&productId=${productId}&sig=${signMeshyWebhook(reportId, productId)}`
             );
           productsWithMockups = withMockups;
           allTokenUsage.push(imageUsage);

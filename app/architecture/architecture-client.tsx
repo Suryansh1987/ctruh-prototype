@@ -684,7 +684,7 @@ export default function ArchitectureClient() {
               desc="Generated PDFs and 3D model previews uploaded to S3. Public URLs served in report cards and download links."
               detail="AWS S3 · pre-signed URLs · PDF + GLB assets" />
             <InfraCard icon="📧" title="Resend Email" status="Implemented" statusColor="#34d399" delay={240}
-              desc="OTP verification on signup. Report-ready email fires when Meshy webhook completes — so users know their 3D models are live even if they closed the tab."
+              desc="OTP verification sent via Resend before any report is generated — keeps bots off the analysis endpoint. A second email fires when 3D models are ready, so users know even if they closed the tab."
               detail="Resend API · OTP gate · report-ready notification" />
             <InfraCard icon="🔔" title="Meshy Webhook" status="Implemented" statusColor="#34d399" delay={300}
               desc="Each Meshy task registers a webhook URL encoding reportId + productId. On completion, GLB is uploaded to S3, DB updated, status set to ready, and user emailed."

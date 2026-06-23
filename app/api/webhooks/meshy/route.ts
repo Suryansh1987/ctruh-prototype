@@ -1,6 +1,7 @@
 import { getReportById, updateReport } from "@/lib/db/queries";
 import { uploadGlbToS3 } from "@/lib/s3/upload";
 import { sendReportReadyEmail } from "@/lib/resend";
+import { isValidMeshyWebhookSignature, matchesLegacyMeshySecret } from "@/lib/meshy/webhook-auth";
 import type { GlbEntry } from "@/lib/db/schema";
 
 export async function POST(request: Request) {
@@ -9,14 +10,17 @@ export async function POST(request: Request) {
     const reportId = searchParams.get("reportId");
     const productId = searchParams.get("productId");
     const secret = searchParams.get("secret");
-
-    const expectedSecret = process.env.MESHY_WEBHOOK_SECRET ?? "";
-    if (expectedSecret && secret !== expectedSecret) {
-      return new Response(null, { status: 401 });
-    }
+    const signature = searchParams.get("sig");
 
     if (!reportId || !productId) {
       return new Response(null, { status: 400 });
+    }
+
+    const isSignedRequest = isValidMeshyWebhookSignature(reportId, productId, signature);
+    const isLegacyRequest = matchesLegacyMeshySecret(secret);
+
+    if (!isSignedRequest && !isLegacyRequest) {
+      return new Response(null, { status: 401 });
     }
 
     const task = await request.json() as {
@@ -48,17 +52,22 @@ export async function POST(request: Request) {
     const productTitle = product?.title ?? `Product ${pid}`;
     const productScore = product?.overallXRScore ?? 0;
 
-    // Upload GLB to S3
-    const s3GlbUrl = await uploadGlbToS3({
-      glbUrl: task.model_urls.glb,
-      storeName: row.storeName ?? "store",
-      productId: pid,
-    });
+    // Upload GLB to S3 — fall back to raw Meshy URL if S3 fails
+    let finalGlbUrl = task.model_urls.glb;
+    try {
+      finalGlbUrl = await uploadGlbToS3({
+        glbUrl: task.model_urls.glb,
+        storeName: row.storeName ?? "store",
+        productId: pid,
+      });
+    } catch (err) {
+      console.error("[webhook] S3 upload failed, using raw Meshy URL:", err);
+    }
 
     const newEntry: GlbEntry = {
       productId: pid,
       title: productTitle,
-      glbUrl: s3GlbUrl,
+      glbUrl: finalGlbUrl,
       previewImageUrl: task.thumbnail_url ?? null,
       score: productScore,
     };
