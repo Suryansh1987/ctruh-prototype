@@ -432,14 +432,14 @@ export default function ArchitectureClient() {
           </h1>
 
           <p style={{ margin: "0 auto 48px", maxWidth: 580, fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.55)" }}>
-            From a Shopify URL to a full XR readiness report in under 60 seconds — here&apos;s exactly how we do it, what it costs, and where we&apos;re headed.
+            From a Shopify URL to a shareable XR readiness report in under 90 seconds — 3D models arrive asynchronously via webhook. Here&apos;s exactly how we do it, what it costs, and where we&apos;re headed.
           </p>
 
           <div className="arch-hero-metrics" style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
             {[
               { val: 45, prefix: "₹", suffix: "", label: "per full report" },
               { val: 14, prefix: "₹", suffix: "", label: "for 2 AI calls only" },
-              { val: 5, prefix: "", suffix: " stages", label: "in the pipeline" },
+              { val: 5, prefix: "", suffix: " stages", label: "in-stream pipeline" },
               { val: 3, prefix: "", suffix: " layers", label: "of fallback" },
             ].map(({ val, prefix, suffix, label }) => (
               <div key={label} style={{
@@ -461,7 +461,7 @@ export default function ArchitectureClient() {
         <SectionHeader
           label="Pipeline"
           title="5-Stage Analysis Engine"
-          sub="Each request flows through a deterministic pipeline — streaming progress back to the client via NDJSON at every stage."
+          sub="Scraping and scoring stream progress in real time. The report is persisted to DB mid-stream so the shareable page exists before 3D models finish. Meshy runs in-stream with a 150s cap — webhook + client polling handle the rest."
         />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16 }}>
           <StageCard num="1" icon="🔗" title="URL Scraping" delay={0}
@@ -470,29 +470,40 @@ export default function ArchitectureClient() {
           <StageCard num="2" icon="🤖" title="AI Scoring" delay={80}
             desc="gpt-4o-mini scores each product on 4 XR dimensions via structured JSON. Token usage logged per batch for cost auditing."
             detail="gpt-4o-mini · batches of 5 · 600 max tokens" />
-          <StageCard num="3" icon="🎲" title="3D Generation" delay={160}
-            desc="Top-scoring products get a Meshy image-to-3D task. GLB + thumbnail streamed back when SUCCEEDED."
-            detail="Meshy API · PBR enabled · 240s timeout" />
-          <StageCard num="4" icon="📊" title="Report Assembly" delay={240}
-            desc="Category-weighted XR Readiness Score, ROI scenarios at 5K/25K/100K traffic, top opportunities ranked."
-            detail="Weighted scoring · ROI at 3 traffic tiers" />
-          <StageCard num="5" icon="💾" title="Persist in BG" delay={320}
-            desc="After streaming the report, PDF is generated → S3, report + token logs saved to Postgres — all off the critical path."
-            detail="S3 · Drizzle ORM · token cost ledger" />
+          <StageCard num="3" icon="💾" title="Early DB Insert" delay={160}
+            desc="Report inserted to Postgres immediately after scoring with status 'processing'. Report page exists before 3D models are ready — shareable from this moment."
+            detail="Drizzle ORM · status: processing → ready" />
+          <StageCard num="4" icon="🎲" title="3D Generation" delay={240}
+            desc="Top 2 products get a Meshy image-to-3D task with a webhook URL. Stream waits up to 150s. If done in time, DB updated and user sees GLBs on load."
+            detail="Meshy API · 150s in-stream · webhook fallback" />
+          <StageCard num="5" icon="📨" title="Persist + Notify" delay={320}
+            desc="After stream closes: PDF generated → S3, pdfUrl saved to DB. If Meshy timed out, webhook fires later and updates GLBs + triggers ready email."
+            detail="next/server after() · Resend email · S3 PDF" />
         </div>
 
-        <div style={{
-          marginTop: 32, background: "rgba(0,87,255,0.08)",
-          border: "1px solid rgba(0,87,255,0.25)", borderRadius: 14, padding: "20px 24px",
-          display: "flex", gap: 16, alignItems: "flex-start",
-        }}>
-          <div style={{ fontSize: 22, flexShrink: 0 }}>⚡</div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Streaming via NDJSON</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.7 }}>
-              The API route returns a <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>ReadableStream</code> of newline-delimited JSON events.
-              The UI receives <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>phase</code>, <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>scraped</code>, <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>scored</code>, and <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>meshy_progress</code> events in real time — no polling needed.
-              The heavy PDF + DB work fires <strong style={{ color: "#fff" }}>after</strong> the stream closes so the user never waits for it.
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 24 }}>
+          <div style={{
+            background: "rgba(0,87,255,0.08)", border: "1px solid rgba(0,87,255,0.25)",
+            borderRadius: 14, padding: "20px 24px", display: "flex", gap: 16, alignItems: "flex-start",
+          }}>
+            <div style={{ fontSize: 22, flexShrink: 0 }}>⚡</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Streaming via NDJSON</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.7 }}>
+                The stream emits <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>phase</code>, <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>scraped</code>, <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>scored</code>, <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>reportId</code>, <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>meshy_progress</code>, then a final <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>redirect</code> event. Client navigates to <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>/report/[id]</code> — a persistent, shareable page.
+              </div>
+            </div>
+          </div>
+          <div style={{
+            background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.25)",
+            borderRadius: 14, padding: "20px 24px", display: "flex", gap: 16, alignItems: "flex-start",
+          }}>
+            <div style={{ fontSize: 22, flexShrink: 0 }}>🔔</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Async 3D + Webhook Fallback</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.7 }}>
+                If Meshy doesn&apos;t finish in 150s, the report page polls <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>GET /api/report/[id]</code> every 15s for up to 5 minutes. Separately, Meshy POSTs to <code style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, padding: "1px 6px", fontSize: 12 }}>/api/webhooks/meshy</code> on completion — GLBs are uploaded to S3, DB updated, and user emailed.
+              </div>
             </div>
           </div>
         </div>
@@ -632,7 +643,7 @@ export default function ArchitectureClient() {
             <TimelineItem phase="Now" icon="🎲" name="Meshy AI" color="#6ba3ff" badge="Active" delay={0} points={[
               "image-to-3D via REST API — no GPU required",
               "PBR material extraction, GLB + thumbnail output",
-              "240s timeout with progress polling every 10s",
+              "150s in-stream timeout · webhook fires on completion if stream closes first",
               "Constraint: API rate limits, per-task cost, external dependency",
             ]} />
             <TimelineItem phase="Near-term" icon="🤖" name="Hunyuan 3D" color="#a78bfa" badge="Tested" delay={120} points={[
@@ -673,11 +684,14 @@ export default function ArchitectureClient() {
               desc="Generated PDFs and 3D model previews uploaded to S3. Public URLs served in report cards and download links."
               detail="AWS S3 · pre-signed URLs · PDF + GLB assets" />
             <InfraCard icon="📧" title="Resend Email" status="Implemented" statusColor="#34d399" delay={240}
-              desc="OTP verification sent via Resend. Keeps bot traffic off the analysis endpoint — only email-verified contacts can generate reports."
-              detail="Resend API · OTP gate · contact verification flow" />
-            <InfraCard icon="🔢" title="Batch Processing" status="Implemented" statusColor="#34d399" delay={300}
-              desc="Products scored in parallel batches of 5 with Promise.all. Saturates the rate limit window without hitting it — deterministic throughput."
-              detail="Batch size 5 · Promise.all · sequential batches" />
+              desc="OTP verification on signup. Report-ready email fires when Meshy webhook completes — so users know their 3D models are live even if they closed the tab."
+              detail="Resend API · OTP gate · report-ready notification" />
+            <InfraCard icon="🔔" title="Meshy Webhook" status="Implemented" statusColor="#34d399" delay={300}
+              desc="Each Meshy task registers a webhook URL encoding reportId + productId. On completion, GLB is uploaded to S3, DB updated, status set to ready, and user emailed."
+              detail="/api/webhooks/meshy · secret validation · idempotent" />
+            <InfraCard icon="🔗" title="Shareable Report Pages" status="Implemented" statusColor="#34d399" delay={360}
+              desc="Every report lives at /report/[id] — a server-rendered page backed by Postgres. Survives refresh, can be shared, and polls every 15s while 3D models are pending."
+              detail="/report/[id] · 15s client polling · 5-min window" />
           </div>
         </div>
       </section>
@@ -690,7 +704,7 @@ export default function ArchitectureClient() {
           sub="Every dependency was chosen for speed of iteration and production readiness."
         />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12 }}>
-          <StackChip name="Next.js 15"    role="App framework · App Router"    color="#fff"     delay={0} />
+          <StackChip name="Next.js 16"    role="App framework · App Router · after()"    color="#fff"     delay={0} />
           <StackChip name="Azure OpenAI"  role="GPT-4o mini · scoring"          color="#6ba3ff"  delay={40} />
           <StackChip name="Meshy AI"      role="Image → 3D (GLB)"              color="#a78bfa"  delay={80} />
           <StackChip name="Firecrawl"     role="JS render + LLM scraping"      color="#fb923c"  delay={120} />

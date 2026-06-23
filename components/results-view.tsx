@@ -131,8 +131,10 @@ export function ResultsView({
     () => [...report.products].sort((a, b) => b.overallXRScore - a.overallXRScore),
     [report.products]
   );
+  // Always show top 2 products in the Before/After section.
+  // When GLBs aren't ready yet the "After" panel shows a "generating" placeholder.
   const generatedProducts = useMemo(
-    () => sortedProducts.filter((product) => product.previewImageUrl || product.glbUrl),
+    () => sortedProducts.slice(0, 2),
     [sortedProducts]
   );
   const readyProducts = sortedProducts.filter((product) => product.overallXRScore >= 7).length;
